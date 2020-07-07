@@ -3,7 +3,6 @@
 #endif
 
 
-//#include "../../include/kite_inline_util/inline_util.h"
 #include <hrd.h>
 #include "kvs.h"
 #include <city.h>

@@ -14,12 +14,12 @@
 
 
 #ifdef ZOOKEEPER
-  #include "../zookeeper/zk_config.h"
+  #include "zk_config.h"
 #endif
 
 #ifndef KITE
   #ifndef ZOOKEEPER
-    #include "../zookeeper/zk_config.h"
+    #include "zk_config.h"
   #endif
 #endif
 
