@@ -48,117 +48,256 @@ static int get_addr(char *dst, struct sockaddr *addr)
 }
 
 //Handle the addresses
-static void resolve_addresses(struct mcast_info *mcast_data)
+static void resolve_addresses(mcast_context_t* mcast_cont)
 {
-  int ret, i, t_id = mcast_data->t_id;
+  mcast_init_t *init = mcast_cont->init;
+  int ret, i, t_id = mcast_cont->t_id;
   char mcast_addr[40];
   // Source addresses (i.e. local IPs)
-  mcast_data->src_addr = (struct sockaddr*)&mcast_data->src_in;
-  ret = get_addr(local_ip, ((struct sockaddr *)&mcast_data->src_in)); // to bind
+  init->src_addr = (struct sockaddr*)&init->src_in;
+  ret = get_addr(local_ip, ((struct sockaddr *)&init->src_in)); // to bind
   if (ret) printf("Client: failed to get src address \n");
-  for (i = 0; i < MCAST_QPS; i++) {
-    ret = rdma_bind_addr(mcast_data->cm_qp[i].cma_id, mcast_data->src_addr);
+  for (i = 0; i < mcast_cont->groups_num; i++) {
+    ret = rdma_bind_addr(init->cm_qp->cma_id[i], init->src_addr);
     if (ret) perror("Client: address bind failed");
   }
   // Destination addresses(i.e. multicast addresses)
-  for (i = 0; i < MCAST_GROUPS_NUM; i ++) {
-    mcast_data->dst_addr[i] = (struct sockaddr*)&mcast_data->dst_in[i];
-    int m_cast_group_id = t_id * MACHINE_NUM + i;
+  for (i = 0; i < mcast_cont->groups_num; i ++) {
+    init->dst_addr[i] = (struct sockaddr*)&init->dst_in[i];
+    int m_cast_group_id = t_id * mcast_cont->machine_num + i;
     sprintf(mcast_addr, "224.0.%d.%d", m_cast_group_id / 256, m_cast_group_id % 256);
 //        printf("mcast addr %d: %s\n", i, mcast_addr);
-    ret = get_addr((char*) &mcast_addr, ((struct sockaddr *)&mcast_data->dst_in[i]));
+    ret = get_addr((char*) &mcast_addr, ((struct sockaddr *)&init->dst_in[i]));
     if (ret) printf("Client: failed to get dst address \n");
   }
 }
 
 // Set up the Send and Receive Qps for the multicast
-static void set_up_qp(struct cm_qps* qps, int *max_recv_q_depth)
+static void set_up_mcast_qps(mcast_context_t* mcast_cont)
 {
+  struct cm_qps *qps = mcast_cont->init->cm_qp;
+  uint32_t *max_recv_q_depth = mcast_cont->recv_q_depth;
+
   int ret, i, recv_q_depth;
-  // qps[0].pd = ibv_alloc_pd(qps[0].cma_id->verbs); //new
-  for (i = 0; i < MCAST_QP_NUM; i++) {
-    qps[i].pd = ibv_alloc_pd(qps[i].cma_id->verbs);
-    if (i > 0) qps[i].pd = qps[0].pd;
-    recv_q_depth = max_recv_q_depth[i];
-    qps[i].cq = ibv_create_cq(qps[i].cma_id->verbs, recv_q_depth, &qps[i], NULL, 0);
+  qps->pd = ibv_alloc_pd(qps->cma_id[0]->verbs);
+
+  // Create the recv QPs that are needed (1 for each flow we are listening to) +
+  // "useless" QPs
+  for (i = 0; i < mcast_cont->groups_num; i++) {
+    recv_q_depth = i < mcast_cont->recv_qp_num ? max_recv_q_depth[i] : 1;
+    assert(qps->cma_id[i] != NULL);
+    assert(&qps->cq[i] != NULL);
+    assert(&qps != NULL);
+    printf("%u\n", recv_q_depth);
+    qps->cq[i] = ibv_create_cq(qps->cma_id[i]->verbs, recv_q_depth, &qps, NULL, 0);
     struct ibv_qp_init_attr init_qp_attr;
     memset(&init_qp_attr, 0, sizeof init_qp_attr);
     init_qp_attr.cap.max_send_wr = 1;
     init_qp_attr.cap.max_recv_wr = (uint32_t) recv_q_depth;
     init_qp_attr.cap.max_send_sge = 1;
     init_qp_attr.cap.max_recv_sge = 1;
-    init_qp_attr.qp_context = &qps[i];
+    init_qp_attr.qp_context = qps;
     init_qp_attr.sq_sig_all = 0;
     init_qp_attr.qp_type = IBV_QPT_UD;
-    init_qp_attr.send_cq = qps[i].cq;
-    init_qp_attr.recv_cq = qps[i].cq;
-    ret = rdma_create_qp(qps[i].cma_id, qps[i].pd, &init_qp_attr);
+    init_qp_attr.send_cq = qps->cq[i];
+    init_qp_attr.recv_cq = qps->cq[i];
+    ret = rdma_create_qp(qps->cma_id[i], qps->pd, &init_qp_attr);
     if (ret) printf("unable to create QP \n");
   }
 }
 
 // Initial function to call to setup multicast, this calls the rest of the relevant functions
-static void setup_multicast(struct mcast_info *mcast_data, int *recv_q_depth)
+static void setup_multicast(mcast_context_t* mcast_cont)
 {
-  int ret, i, clt_id = mcast_data->t_id;
+  int ret, i;
+  uint16_t t_id = mcast_cont->t_id;
   static enum rdma_port_space port_space = RDMA_PS_UDP;
+  mcast_init_t *init = mcast_cont->init;
   // Create the channel
-  mcast_data->channel = rdma_create_event_channel();
-  if (!mcast_data->channel) {
-    printf("Client %d :failed to create event channel\n", mcast_data->t_id);
+  init->channel = rdma_create_event_channel();
+  if (!init->channel) {
+    printf("Client %d :failed to create event channel\n", t_id);
     exit(1);
   }
   // Set up the cma_ids
-  for (i = 0; i < MCAST_QPS; i++ ) {
-    ret = rdma_create_id(mcast_data->channel, &mcast_data->cm_qp[i].cma_id, &mcast_data->cm_qp[i], port_space);
-    if (ret) printf("Client %d :failed to create cma_id\n", mcast_data->t_id);
+  for (i = 0; i < mcast_cont->groups_num; i++ ) {
+    ret = rdma_create_id(init->channel, &init->cm_qp->cma_id[i],
+                         &init->cm_qp, port_space);
+    if (ret) printf("Client %d :failed to create cma_id\n", t_id);
   }
   // deal with the addresses
-  resolve_addresses(mcast_data);
-  // set up the 2 qps
-  set_up_qp(mcast_data->cm_qp, recv_q_depth);
+  resolve_addresses(mcast_cont);
+  // set up the qps
+  set_up_mcast_qps(mcast_cont);
 
-  struct rdma_cm_event* event;
-  for (i = 0; i < MCAST_GROUPS_NUM; i ++) {
-    int qp_i = i;
-    ret = rdma_resolve_addr(mcast_data->cm_qp[i].cma_id, mcast_data->src_addr, mcast_data->dst_addr[i], 20000);
-    if (ret) printf("Client %d: failed to resolve address: %d, qp_i %d \n", clt_id, i, qp_i);
-    if (ret) perror("Reason");
-    while (rdma_get_cm_event(mcast_data->channel, &event) == 0) {
-      switch (event->event) {
-        case RDMA_CM_EVENT_ADDR_RESOLVED:
+  struct rdma_cm_event* event = malloc(sizeof(struct rdma_cm_event));
+  //uint32_t group_num = mcast_cont->flow_num * mcast_cont->active_bcast_machine_num;
+  int qp_i = 0;
+  for (int j = 0; j < mcast_cont->flow_num; ++j) {
+    for (i = 0; i < mcast_cont->active_bcast_machine_num; i++) {
+      //int qp_i = i;
+      //int qp_i = i == machine_id ? 1 : 0;
+      int group_i = j * mcast_cont->active_bcast_machine_num + i;
+      ret = rdma_resolve_addr(init->cm_qp->cma_id[group_i], init->src_addr, init->dst_addr[group_i], 20000);
+      if (ret) printf("Client %d: failed to resolve address: %d, qp_i %d \n", t_id, i, qp_i);
+      if (ret) perror("Reason");
+
+      while (rdma_get_cm_event(init->channel, &event) == 0) {
+        bool joined = false;
+        switch (event->event) {
+          case RDMA_CM_EVENT_ADDR_RESOLVED:
 //                     printf("Client %d: RDMA ADDRESS RESOLVED address: %d \n", m_id, i);
-          ret = rdma_join_multicast(mcast_data->cm_qp[qp_i].cma_id, mcast_data->dst_addr[i], mcast_data);
-          if (ret) printf("unable to join multicast \n");
-          break;
-        case RDMA_CM_EVENT_MULTICAST_JOIN:
-          mcast_data->mcast_ud_param[i] = event->param.ud;
+
+            if (j >= mcast_cont->recv_qp_num) {
+              qp_i = mcast_cont->recv_qp_num; // this means we are not interested to receive from this flow
+            }
+            // We do not want to register the recv_qp that we will use to the mcast group that we own (i.e. i == machine_id)
+            else if (j < mcast_cont->send_qp_num &&  i == machine_id) {
+              qp_i = mcast_cont->recv_qp_num; // this is a useless qp
+            }
+            else qp_i = j; // this recv_qp will be used
+            printf("Worker %u uses recvp qp %u in group %u \n", t_id, qp_i, group_i);
+            ret = rdma_join_multicast(init->cm_qp->cma_id[qp_i], init->dst_addr[group_i], init);
+            if (ret) printf("unable to join multicast \n");
+            break;
+          case RDMA_CM_EVENT_MULTICAST_JOIN:
+            joined = true;
+            if (i == machine_id && j < mcast_cont->send_qp_num) {
+              init->mcast_ud_param[j] = event->param.ud;
+            }
 //                     printf("RDMA JOIN MUlTICAST EVENT %d \n", i);
-          break;
-        case RDMA_CM_EVENT_MULTICAST_ERROR:
-        default:
-          break;
+            break;
+          case RDMA_CM_EVENT_MULTICAST_ERROR:
+          default:
+            break;
+        }
+        rdma_ack_cm_event(event);
+        if (joined) break;
       }
-      rdma_ack_cm_event(event);
-      if (event->event == RDMA_CM_EVENT_MULTICAST_JOIN) break;
+      //if (i != RECV_MCAST_QP) {
+      // destroying the QPs works fine but hurts performance...
+      //  rdma_destroy_qp(init->cm_qp->cma_id[i]);
+      //  rdma_destroy_id(init->cm_qp->cma_id[i]);
+      //}
+
     }
-    //if (i != RECV_MCAST_QP) {
-    // destroying the QPs works fine but hurts performance...
-    //  rdma_destroy_qp(mcast_data->cm_qp[i].cma_id);
-    //  rdma_destroy_id(mcast_data->cm_qp[i].cma_id);
-    //}
   }
-  // rdma_destroy_event_channel(mcast_data->channel);
-  // if (mcast_data->mcast_ud_param == NULL) mcast_data->mcast_ud_param = event->param.ud;
+  // rdma_destroy_event_channel(init->channel);
+  // if (init->mcast_ud_param == NULL) init->mcast_ud_param = event->param.ud;
 }
 
 
+static mcast_cb_t *construct_mcast_cb(mcast_context_t* mcast_cont)
+{
+  mcast_cb_t* mcast_cb = (mcast_cb_t*) malloc(sizeof(mcast_cb_t));
+
+  mcast_cb->recv_cq = calloc(mcast_cont->qp_num, sizeof(struct ibv_cq*));
+  mcast_cb->recv_qp = calloc(mcast_cont->qp_num, sizeof(struct ibv_qp*));
+  mcast_cb->send_ah = calloc(mcast_cont->qp_num, sizeof(struct ibv_ah*));
+  mcast_cb->qpn = calloc(mcast_cont->qp_num, sizeof(uint32_t));
+  mcast_cb->qkey = calloc(mcast_cont->qp_num, sizeof(uint32_t));
+
+  return mcast_cb;
+}
+
+static mcast_context_t* construct_mcast_cont(uint16_t groups_num, uint16_t qp_num,
+                                             uint16_t machine_num, uint32_t *recv_q_depth,
+                                             void *buf, size_t buff_size,
+                                             uint16_t t_id)
+{
+  mcast_context_t* mcast_cont = (mcast_context_t*) malloc(sizeof(mcast_context_t));
+
+  mcast_cont->qp_num = qp_num;
+  mcast_cont->machine_num = machine_num;
+  mcast_cont->buf = buf;
+  mcast_cont->buff_size = buff_size;
+  mcast_cont->t_id = t_id;
+  mcast_cont->recv_q_depth = recv_q_depth;
+  mcast_cont->flow_num = (uint16_t) (COMPILED_SYSTEM == kite_sys?  1 : 2);
+  mcast_cont->active_bcast_machine_num = (uint16_t) (COMPILED_SYSTEM == kite_sys?  machine_num : 1);
+  mcast_cont->send_qp_num = (COMPILED_SYSTEM == kite_sys?  1 : (machine_id == 0 ? 2 : 0));
+  mcast_cont->recv_qp_num = (COMPILED_SYSTEM == kite_sys?  1 : (machine_id == 0 ? 0 : 2));
+  mcast_cont->groups_num = mcast_cont->active_bcast_machine_num * mcast_cont->flow_num;
+
+
+  // Set up the init structure
+  mcast_cont->init = (mcast_init_t*) malloc(sizeof(mcast_init_t));
+  mcast_cont->init->dst_in = calloc(mcast_cont->groups_num, sizeof(struct sockaddr_storage));
+  mcast_cont->init->dst_addr = calloc(mcast_cont->groups_num, sizeof(struct sockaddr *));
+  mcast_cont->init->cm_qp = calloc(1, sizeof(struct cm_qps));
+  mcast_cont->init->mcast_ud_param = calloc(mcast_cont->send_qp_num, sizeof(struct rdma_ud_param));
+
+  // Set up cm_qp
+  struct cm_qps *cm = mcast_cont->init->cm_qp;
+  cm->cma_id = calloc(mcast_cont->groups_num, sizeof(struct rdma_cm_id*));
+  cm->cq = calloc(mcast_cont->groups_num, sizeof(struct ibv_cq*));
+
+  return mcast_cont;
+
+}
+
+
+static void destroy_mcast_cont(mcast_context_t* mcast_cont)
+{
+  free(mcast_cont->init->dst_in);
+  free(mcast_cont->init->dst_addr);
+  free(mcast_cont->init->mcast_ud_param);
+
+  // Set up cm_qp
+  struct cm_qps *cm = mcast_cont->init->cm_qp;
+  free(cm->cma_id);
+  free(cm->cq);
+
+  free(mcast_cont->init->cm_qp);
+  free(mcast_cont->init);
+  free(mcast_cont);
+}
+
+
+
+static mcast_cb_t* create_mcast_cb(uint16_t groups_num, uint16_t qp_num,
+                                   uint16_t machine_num, uint32_t *recv_q_depth,
+                                   void *buf, size_t buff_size,
+                                   uint16_t t_id)
+{
+
+  mcast_context_t* mcast_cont = construct_mcast_cont(groups_num, qp_num, machine_num,
+                                                     recv_q_depth, buf, buff_size, t_id);
+  setup_multicast(mcast_cont);
+
+  mcast_cb_t* mcast_cb = construct_mcast_cb(mcast_cont);
+  // Fill cb from the mcast-context
+  mcast_init_t* init = mcast_cont->init;
+  for (uint16_t i = 0; i < mcast_cont->recv_qp_num; i++) {
+    mcast_cb->recv_cq[i] = init->cm_qp->cq[i];
+    mcast_cb->recv_qp[i] = init->cm_qp->cma_id[i]->qp;
+  }
+
+  for (uint16_t i = 0; i < mcast_cont->send_qp_num; i++) {
+    mcast_cb->send_ah[i] = ibv_create_ah(init->cm_qp->pd, &(init->mcast_ud_param[i].ah_attr));
+    mcast_cb->qpn[i] = init->mcast_ud_param[i].qp_num;
+    mcast_cb->qkey[i] = init->mcast_ud_param[i].qkey;
+  }
+  mcast_cb->recv_mr = ibv_reg_mr(init->cm_qp->pd, mcast_cont->buf,
+                                 mcast_cont->buff_size, IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_READ |
+                                                        IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_ATOMIC);
+
+  destroy_mcast_cont(mcast_cont);
+
+
+  return mcast_cb;
+}
+
+
+
 // call to test the multicast
-static void multicast_testing(mcast_essentials_t *mcast, int clt_gid, struct hrd_ctrl_blk *cb, uint8_t qp_id) // W_QP_ID
+static void multicast_testing(mcast_cb_t *mcast, int clt_gid,
+                              uint8_t mcast_qp_id,
+                              hrd_ctrl_blk_t *cb, uint8_t qp_id) // W_QP_ID
 {
 
   struct ibv_wc mcast_wc;
-  printf ("Client: Multicast Qkey %u and qpn %u \n", mcast->qkey[COM_MCAST_QP], mcast->qpn[COM_MCAST_QP]);
+  printf ("Client: Multicast Qkey %u and qpn %u \n", mcast->qkey[mcast_qp_id], mcast->qpn[mcast_qp_id]);
 
 
   struct ibv_sge mcast_sg;
@@ -179,9 +318,9 @@ static void multicast_testing(mcast_essentials_t *mcast, int clt_gid, struct hrd
   mcast_wr.imm_data   = (uint32_t) (clt_gid + 120 + (machine_id * 10));
   mcast_wr.next       = NULL;
 
-  mcast_wr.wr.ud.ah          = mcast->send_ah[COM_MCAST_QP];
-  mcast_wr.wr.ud.remote_qpn  = mcast->qpn[COM_MCAST_QP];
-  mcast_wr.wr.ud.remote_qkey = mcast->qkey[COM_MCAST_QP];
+  mcast_wr.wr.ud.ah          = mcast->send_ah[mcast_qp_id];
+  mcast_wr.wr.ud.remote_qpn  = mcast->qpn[mcast_qp_id];
+  mcast_wr.wr.ud.remote_qkey = mcast->qkey[mcast_qp_id];
 
   if (ibv_post_send(cb->dgram_qp[qp_id], &mcast_wr, &mcast_bad_wr)) {
     fprintf(stderr, "Error, ibv_post_send() failed\n");
@@ -191,43 +330,14 @@ static void multicast_testing(mcast_essentials_t *mcast, int clt_gid, struct hrd
   printf("THe mcast was sent, I am waiting for confirmation imm data %d\n", mcast_wr.imm_data);
   hrd_poll_cq(cb->dgram_send_cq[qp_id], 1, &mcast_wc);
   printf("The mcast was sent \n");
-  hrd_poll_cq(mcast->recv_cq[COM_MCAST_QP], 1, &mcast_wc);
+  hrd_poll_cq(mcast->recv_cq[mcast_qp_id], 1, &mcast_wc);
   printf("Client %d imm data recved %d \n", clt_gid, mcast_wc.imm_data);
-  hrd_poll_cq(mcast->recv_cq[COM_MCAST_QP], 1, &mcast_wc);
+  hrd_poll_cq(mcast->recv_cq[mcast_qp_id], 1, &mcast_wc);
   printf("Client %d imm data recved %d \n", clt_gid, mcast_wc.imm_data);
-  hrd_poll_cq(mcast->recv_cq[COM_MCAST_QP], 1, &mcast_wc);
+  hrd_poll_cq(mcast->recv_cq[mcast_qp_id], 1, &mcast_wc);
   printf("Client %d imm data recved %d \n", clt_gid, mcast_wc.imm_data);
 
   exit(0);
-}
-
-// Initialize the mcast_essentials structure that is necessary
-static void init_multicast(struct mcast_info **mcast_data, struct mcast_essentials **mcast,
-                    int t_id, struct hrd_ctrl_blk *cb, size_t total_buf_size, int *recv_q_depth)//, size_t recv_q_depth)
-{
-  *mcast_data =  (mcast_info_t *) malloc(sizeof(mcast_info_t));
-  (*mcast_data)->t_id = t_id;
-  setup_multicast(*mcast_data, recv_q_depth);
-//   char char_buf[40];
-//   inet_ntop(AF_INET6, (*mcast_data)->mcast_ud_param.ah_attr.grh.dgid.raw, char_buf, 40);
-//   printf("client: joined dgid: %s mlid 0x%x sl %d\n", char_buf,	(*mcast_data)->mcast_ud_param.ah_attr.dlid, (*mcast_data)->mcast_ud_param.ah_attr.sl);
-  *mcast = (mcast_essentials_t *) malloc(sizeof(mcast_essentials_t));
-
-  for (uint16_t i = 0; i < MCAST_QP_NUM; i++){
-    (*mcast)->recv_cq[i] = (*mcast_data)->cm_qp[i].cq;
-    (*mcast)->recv_qp[i] = (*mcast_data)->cm_qp[i].cma_id->qp;
-    (*mcast)->send_ah[i] = ibv_create_ah(cb->pd, &((*mcast_data)->mcast_ud_param[i].ah_attr));
-    (*mcast)->qpn[i]  =  (*mcast_data)->mcast_ud_param[i].qp_num;
-    (*mcast)->qkey[i]  =  (*mcast_data)->mcast_ud_param[i].qkey;
-
-  }
-  (*mcast)->recv_mr = ibv_reg_mr((*mcast_data)->cm_qp[0].pd, (void *)cb->dgram_buf,
-                                 (size_t)total_buf_size, IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_READ |
-                                                         IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_ATOMIC);
-
-
-  free(*mcast_data);
-  //if (protocol == FOLLOWER) assert((*mcast)->recv_mr != NULL);
 }
 
 //--------------------------------------------------
@@ -236,7 +346,7 @@ static void init_multicast(struct mcast_info **mcast_data, struct mcast_essentia
 
 
 // Worker calls this function to connect with all workers
-static void get_qps_from_all_other_machines(struct hrd_ctrl_blk *cb)
+static void get_qps_from_all_other_machines(hrd_ctrl_blk_t *cb)
 {
   int g_i, qp_i, w_i, m_i;
   int ib_port_index = 0;
@@ -380,7 +490,7 @@ static void set_up_qp_attr_server(int qp_num)
 
 
 // Used by all kinds of threads to publish their QPs
-static void fill_qps(int t_id, struct hrd_ctrl_blk *cb)
+static void fill_qps(int t_id, hrd_ctrl_blk_t *cb)
 {
   uint32_t qp_i;
   for (qp_i = 0; qp_i < cb->num_dgram_qps; qp_i++) {
@@ -402,7 +512,7 @@ static void fill_qps(int t_id, struct hrd_ctrl_blk *cb)
 
 // All workers both use this to establish connections
 static void setup_connections(uint32_t g_id,
-                              struct hrd_ctrl_blk *cb)
+                              hrd_ctrl_blk_t *cb)
 {
   int t_id = g_id % WORKERS_PER_MACHINE;
   fill_qps(t_id, cb);
@@ -441,7 +551,7 @@ static void wait_for_thread_zero()
 
 
 static void setup_connections_and_spawn_stats_thread(uint32_t g_id,
-                                                     struct hrd_ctrl_blk *cb,
+                                                     hrd_ctrl_blk_t *cb,
                                                      uint16_t t_id)
 {
   setup_connections(g_id, cb);

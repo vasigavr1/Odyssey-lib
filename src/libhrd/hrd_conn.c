@@ -5,7 +5,7 @@
  * buffer. If @prealloc_conn_buf == NULL, @conn_buf_size is the w_size of the
  * new buffer to create.
  */
-struct hrd_ctrl_blk*
+hrd_ctrl_blk_t*
 hrd_ctrl_blk_init(int local_hid, int port_index,
 	int numa_node_id, /* -1 means don't use hugepages */
 	int num_conn_qps, int use_uc,
@@ -45,9 +45,9 @@ hrd_ctrl_blk_init(int local_hid, int port_index,
 		assert(false);
 	}
 
-	struct hrd_ctrl_blk *cb = (struct hrd_ctrl_blk *)
-		malloc(sizeof(struct hrd_ctrl_blk));
-	memset(cb, 0, sizeof(struct hrd_ctrl_blk));
+	hrd_ctrl_blk_t *cb = (hrd_ctrl_blk_t *)
+		malloc(sizeof(hrd_ctrl_blk_t));
+	memset(cb, 0, sizeof(hrd_ctrl_blk_t));
 
 	/* Fill in the control block */
 	cb->local_hid = local_hid;
@@ -133,7 +133,7 @@ hrd_ctrl_blk_init(int local_hid, int port_index,
 }
 
 /* Free up the resources taken by @cb. Return -1 if something fails, else 0. */
-int hrd_ctrl_blk_destroy(struct hrd_ctrl_blk *cb)
+int hrd_ctrl_blk_destroy(hrd_ctrl_blk_t *cb)
 {
 	int i;
   my_printf(red, "HRD: Destroying control block %d\n", cb->local_hid);
@@ -228,7 +228,7 @@ int hrd_ctrl_blk_destroy(struct hrd_ctrl_blk *cb)
 
 
 /* Create datagram QPs and transition them to RTS */
-void hrd_create_dgram_qps(struct hrd_ctrl_blk *cb)
+void hrd_create_dgram_qps(hrd_ctrl_blk_t *cb)
 {
 	int i;
 	assert(cb->dgram_qp != NULL && cb->dgram_send_cq != NULL &&

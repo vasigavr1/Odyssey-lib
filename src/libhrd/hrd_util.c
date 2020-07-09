@@ -55,7 +55,7 @@ void hrd_ibv_devinfo(void)
  * control block.
  */
 struct ibv_device*
-hrd_resolve_port_index(struct hrd_ctrl_blk *cb, int port_index)
+hrd_resolve_port_index(hrd_ctrl_blk_t *cb, int port_index)
 {
 	struct ibv_device **dev_list;
 	int num_devices = 0;
@@ -338,6 +338,6 @@ void hrd_post_dgram_recv(struct ibv_qp *qp, void *buf_addr, int len, int lkey)
 	ret = ibv_post_recv(qp, &recv_wr, &bad_wr);
 	if(ret) {
 		fprintf(stderr, "HRD: Error %d posting datagram recv.\n", ret);
-		exit(-1);
+		assert(false);
 	}
 }

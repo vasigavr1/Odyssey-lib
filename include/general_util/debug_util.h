@@ -6,7 +6,6 @@
 #define DEBUG_UTIL_H
 
 #include "top.h"
-//#include "client_if_util.h"
 
 static inline bool is_client_req_active(uint32_t sess_id, uint32_t req_array_i, uint16_t t_id);
 

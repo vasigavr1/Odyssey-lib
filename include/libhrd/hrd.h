@@ -57,25 +57,25 @@ typedef struct hrd_ctrl_blk {
 } hrd_ctrl_blk_t;
 
 /* Major initialization functions */
-struct hrd_ctrl_blk* hrd_ctrl_blk_init(int local_hid,
+hrd_ctrl_blk_t* hrd_ctrl_blk_init(int local_hid,
 									   int port_index, int numa_node_id,
 									   int num_conn_qps, int use_uc,
 									   volatile void *prealloc_conn_buf, int conn_buf_size, int conn_buf_shm_key,
 									   int num_dgram_qps, int dgram_buf_size, int dgram_buf_shm_key,
 									   int *recv_q_depth, int *send_q_depth);
 
-int hrd_ctrl_blk_destroy(struct hrd_ctrl_blk *cb);
+int hrd_ctrl_blk_destroy(hrd_ctrl_blk_t *cb);
 
 /* Debug */
 void hrd_ibv_devinfo(void);
 
 /* RDMA resolution functions */
-struct ibv_device* hrd_resolve_port_index(struct hrd_ctrl_blk *cb,
+struct ibv_device* hrd_resolve_port_index(hrd_ctrl_blk_t *cb,
 										  int port_index);
 
 uint16_t hrd_get_local_lid(struct ibv_context *ctx, int port_id);
 
-void hrd_create_dgram_qps(struct hrd_ctrl_blk *cb);
+void hrd_create_dgram_qps(hrd_ctrl_blk_t *cb);
 
 
 /* Post 1 RECV for this queue pair for this buffer. Low performance. */

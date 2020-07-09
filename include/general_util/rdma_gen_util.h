@@ -9,8 +9,34 @@
 #include "hrd.h"
 #include "config_util.h"
 
+static void set_up_wr(struct ibv_send_wr *send_wr, struct ibv_sge *send_sgl,
+                      bool enable_inlining, bool last, uint16_t rm_id,
+                      uint16_t remote_thread, uint16_t qp_id, bool use_mcast,
+                      mcast_cb_t *mcast_cb, uint16_t mcast_qp_id)
+{
+  if (use_mcast) {
+    send_wr->wr.ud.ah = mcast_cb->send_ah[mcast_qp_id];
+    send_wr->wr.ud.remote_qpn = mcast_cb->qpn[mcast_qp_id];
+    send_wr->wr.ud.remote_qkey = mcast_cb->qkey[mcast_qp_id];
+  }
+  else {
+    send_wr->wr.ud.ah = rem_qp[rm_id][remote_thread][qp_id].ah;
+    send_wr->wr.ud.remote_qpn = (uint32_t) rem_qp[rm_id][remote_thread][qp_id].qpn;
+    send_wr->wr.ud.remote_qkey = HRD_DEFAULT_QKEY;
+  }
+  send_wr->opcode = IBV_WR_SEND;
+  send_wr->num_sge = 1;
+  send_wr->sg_list = send_sgl;
+
+  if (enable_inlining) send_wr->send_flags = IBV_SEND_INLINE;
+  else send_wr->send_flags = 0;
+
+  send_wr->next = last ? NULL : &send_wr[1];
+}
+
+
 // Set up the receive info
-static recv_info_t* init_recv_info(struct hrd_ctrl_blk *cb, uint32_t push_ptr, uint32_t buf_slots,
+static recv_info_t* init_recv_info(uint32_t lkey, uint32_t push_ptr, uint32_t buf_slots,
                                    uint32_t slot_size, uint32_t posted_recvs,
                                    struct ibv_qp *recv_qp, int max_recv_wrs,
                                    struct ibv_recv_wr *recv_wr,
@@ -34,12 +60,12 @@ static recv_info_t* init_recv_info(struct hrd_ctrl_blk *cb, uint32_t push_ptr, u
       recv->recv_wr[i].sg_list = recv->recv_sgl;
       recv->recv_sgl->addr = (uintptr_t) buf;
       recv->recv_sgl->length = slot_size;
-      recv->recv_sgl->lkey = cb->dgram_buf_mr->lkey;
+      recv->recv_sgl->lkey = lkey;
     }
     else {
       recv->recv_wr[i].sg_list = &(recv->recv_sgl[i]);
       recv->recv_sgl[i].length = slot_size;
-      recv->recv_sgl[i].lkey = cb->dgram_buf_mr->lkey;
+      recv->recv_sgl[i].lkey = lkey;
     }
     recv->recv_wr[i].num_sge = 1;
   }

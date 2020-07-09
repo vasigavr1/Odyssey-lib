@@ -138,13 +138,13 @@ static inline bool keys_are_equal(struct key *key1, struct key *key2) {
   return memcmp(key1, key2, KEY_SIZE) == 0;
 }
 
-static inline struct key create_key(uint32_t key_id)
-{
-  uint64_t key_hash = CityHash128((char *) &(key_id), 4).second;
-  struct key key;
-  memcpy(&key, &key_hash, KEY_SIZE);
-  return key;
-}
+//static inline struct key create_key(uint32_t key_id)
+//{
+//  uint64_t key_hash = CityHash128((char *) &(key_id), 4).second;
+//  struct key key;
+//  memcpy(&key, &key_hash, KEY_SIZE);
+//  return key;
+//}
 
 
 
