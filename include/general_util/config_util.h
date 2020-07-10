@@ -195,53 +195,12 @@ static inline void decrease_credits(uint16_t credits[][MACHINE_NUM], quorum_info
     if (ENABLE_ASSERTIONS) {
       assert(credits[vc][q_info->active_ids[i]] >= mes_sent);
       assert(q_info->active_ids[i] != machine_id && q_info->active_ids[i] < MACHINE_NUM);
-      //assert(q_info->active_num == REM_MACH_NUM); // debug no-failure case
     }
+
     credits[vc][q_info->active_ids[i]] -= mes_sent;
   }
 }
 
 
-static inline uint32_t get_last_message_of_bcast(uint16_t br_i,
-                                                  quorum_info_t *q_info)
-{
-  if (ENABLE_ASSERTIONS) assert(br_i > 0);
-  if (ENABLE_MULTICAST)
-    return (uint32_t) ((br_i * MESSAGES_IN_BCAST) - 1);
-  else return  (uint32_t)
-      (((br_i - 1) * MESSAGES_IN_BCAST) + q_info->last_active_rm_id);
-}
-
-static inline uint32_t get_first_message_of_next_bcast(uint16_t br_i,
-                                                       quorum_info_t *q_info)
-{
-  if (ENABLE_ASSERTIONS) assert(br_i > 0);
-  if (ENABLE_MULTICAST)
-    return (uint32_t) (br_i * MESSAGES_IN_BCAST) ;
-  else return  (uint32_t)
-      ((br_i * MESSAGES_IN_BCAST) + q_info->first_active_rm_id);
-}
-
-
-static inline void last_mes_of_bcast_point_to_frst_mes_of_next_bcast(uint16_t br_i,
-                                                                     quorum_info_t *q_info,
-                                                                     struct ibv_send_wr *send_wr)
-{
-  if (ENABLE_ASSERTIONS) assert(br_i > 0);
-  send_wr[get_last_message_of_bcast(br_i, q_info)].next =
-    &send_wr[get_first_message_of_next_bcast(br_i, q_info)];
-
-}
-
-static inline uint32_t get_first_mes_of_bcast(quorum_info_t *q_info)
-{
-  return (uint32_t) (ENABLE_MULTICAST ? 0 : q_info->first_active_rm_id);
-}
-
-static inline void flag_the_first_bcast_message_signaled(quorum_info_t *q_info,
-                                                         struct ibv_send_wr *send_wr)
-{
-  send_wr[get_first_mes_of_bcast(q_info)].send_flags |= IBV_SEND_SIGNALED;
-}
 
 #endif //CONFIG_UTIL_H

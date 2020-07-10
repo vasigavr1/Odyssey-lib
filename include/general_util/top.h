@@ -93,9 +93,9 @@ typedef struct key mica_key_t;
 #define KVS_SOCKET 0// (WORKERS_PER_MACHINE < 30 ? 0 : 1 )// socket where the cache is bind
 
 // CORE CONFIGURATION
-#define WORKERS_PER_MACHINE 1
-#define MACHINE_NUM 2
-#define SESSIONS_PER_THREAD 1
+#define WORKERS_PER_MACHINE 20
+#define MACHINE_NUM 5
+#define SESSIONS_PER_THREAD 40
 #define ENABLE_CLIENTS 0
 #define CLIENTS_PER_MACHINE_ 5
 #define CLIENTS_PER_MACHINE (ENABLE_CLIENTS ? CLIENTS_PER_MACHINE_ : 0)
@@ -129,7 +129,7 @@ typedef struct key mica_key_t;
 /* ----------TRACE------------------------ */
 //-------------------------------------------
 #define WRITE_RATIO 1000 //Warning write ratio is given out of a 1000, e.g 10 means 10/1000 i.e. 1%
-#define SC_RATIO 500// this is out of 1000, e.g. 10 means 1%
+#define SC_RATIO 1000// this is out of 1000, e.g. 10 means 1%
 #define ENABLE_RELEASES (1 && COMPILED_SYSTEM == kite_sys)
 #define ENABLE_ACQUIRES (1 && COMPILED_SYSTEM == kite_sys)
 #define RMW_RATIO 1000// this is out of 1000, e.g. 10 means 1%
@@ -257,61 +257,11 @@ enum {
 	-----------------MULTICAST-------------------------
 --------------------------------------------------*/
 // Multicast defines are not used, but are kept them for possible extension
-#define ENABLE_MULTICAST_ 0
+#define ENABLE_MULTICAST_ 1
 #define ENABLE_MULTICAST ENABLE_MULTICAST_ //(COMPILED_SYSTEM  ==  kite_sys ? 0 : ENABLE_MULTICAST_)
 #define MULTICAST_TESTING_ 0
 #define MULTICAST_TESTING (ENABLE_MULTICAST == 1 ? MULTICAST_TESTING_ : 0)
 
-
-// This helps us set up the necessary rdma_cm_ids for the multicast groups
-struct cm_qps
-{
-  struct rdma_cm_id **cma_id;
-  struct ibv_pd* pd;
-  struct ibv_cq** cq;
-};
-
-
-// This helps us set up the multicasts
-typedef struct mcast_init
-{
-  //int	t_id;
-  struct rdma_event_channel *channel;
-  struct sockaddr_storage *dst_in; //[MCAST_GROUPS_NUM];
-  struct sockaddr **dst_addr; //[MCAST_GROUPS_NUM];
-  struct sockaddr_storage src_in;
-  struct sockaddr *src_addr;
-  struct cm_qps *cm_qp; //[MCAST_QPS];
-  //Send-only stuff
-  struct rdma_ud_param *mcast_ud_param; //[MCAST_GROUPS_NUM];
-
-} mcast_init_t;
-
-typedef struct mcast_context {
-  mcast_init_t *init;
-  uint16_t groups_num;
-  uint16_t qp_num;
-  uint16_t machine_num;
-  uint32_t *recv_q_depth;
-  void *buf;
-  size_t buff_size;
-  uint16_t flow_num;
-  uint16_t active_bcast_machine_num;
-  uint16_t send_qp_num;
-  uint16_t recv_qp_num;
-  uint16_t t_id;
-} mcast_context_t;
-
-
-// this contains all data we need to perform our mcasts
-typedef struct mcast_cb {
-  struct ibv_cq **recv_cq; //[MCAST_QP_NUM];
-  struct ibv_qp **recv_qp; //[MCAST_QP_NUM];
-  struct ibv_mr *recv_mr;
-  struct ibv_ah **send_ah; //[MCAST_QP_NUM];
-  uint32_t *qpn; //[MCAST_QP_NUM];
-  uint32_t *qkey; //[MCAST_QP_NUM];
-} mcast_cb_t;
 
 
 

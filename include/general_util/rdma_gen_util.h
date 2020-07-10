@@ -7,7 +7,11 @@
 
 #include "top.h"
 #include "hrd.h"
-#include "config_util.h"
+#include "multicast.h"
+
+/*-----------------------------------------------------------------------
+ * ----------------------------INIT-----------------------------------
+ * ----------------------------------------------------------------------- */
 
 static void set_up_wr(struct ibv_send_wr *send_wr, struct ibv_sge *send_sgl,
                       bool enable_inlining, bool last, uint16_t rm_id,
@@ -72,6 +76,57 @@ static recv_info_t* init_recv_info(uint32_t lkey, uint32_t push_ptr, uint32_t bu
   return recv;
 }
 
+/*-----------------------------------------------------------------------
+ * ----------------------------ACCESS WRs-----------------------------------
+ * ----------------------------------------------------------------------- */
+
+
+
+static inline uint32_t get_last_message_of_bcast(uint16_t br_i,
+                                                 quorum_info_t *q_info)
+{
+  if (ENABLE_ASSERTIONS) assert(br_i > 0);
+  if (ENABLE_MULTICAST)
+    return (uint32_t) ((br_i * MESSAGES_IN_BCAST) - 1);
+  else return  (uint32_t)
+      (((br_i - 1) * MESSAGES_IN_BCAST) + q_info->last_active_rm_id);
+}
+
+static inline uint32_t get_first_message_of_next_bcast(uint16_t br_i,
+                                                       quorum_info_t *q_info)
+{
+  if (ENABLE_ASSERTIONS) assert(br_i > 0);
+  if (ENABLE_MULTICAST)
+    return (uint32_t) (br_i * MESSAGES_IN_BCAST) ;
+  else return  (uint32_t)
+      ((br_i * MESSAGES_IN_BCAST) + q_info->first_active_rm_id);
+}
+
+
+static inline void last_mes_of_bcast_point_to_frst_mes_of_next_bcast(uint16_t br_i,
+                                                                     quorum_info_t *q_info,
+                                                                     struct ibv_send_wr *send_wr)
+{
+  if (ENABLE_ASSERTIONS) assert(br_i > 0);
+  send_wr[get_last_message_of_bcast(br_i, q_info)].next =
+    &send_wr[get_first_message_of_next_bcast(br_i, q_info)];
+
+}
+
+static inline uint32_t get_first_mes_of_bcast(quorum_info_t *q_info)
+{
+  return (uint32_t) (ENABLE_MULTICAST ? 0 : q_info->first_active_rm_id);
+}
+
+static inline void flag_the_first_bcast_message_signaled(quorum_info_t *q_info,
+                                                         struct ibv_send_wr *send_wr)
+{
+  send_wr[get_first_mes_of_bcast(q_info)].send_flags |= IBV_SEND_SIGNALED;
+}
+
+/*-----------------------------------------------------------------------
+ * -----------------------------------------------------------------------
+ * ----------------------------------------------------------------------- */
 
 // Post Receives
 static inline void post_recvs_with_recv_info(recv_info_t *recv, uint32_t recv_num)
@@ -176,26 +231,6 @@ static inline int find_how_many_messages_can_be_polled(struct ibv_cq *recv_cq, s
 }
 
 
-static inline void form_bcast_links(uint64_t *br_tx, int bcast_ss_batch, quorum_info_t *q_info,
-                                    uint16_t br_i, struct ibv_send_wr *send_wr,
-                                    struct ibv_cq *dgram_send_cq, const char *mes, uint16_t t_id)
-{
-  if (ENABLE_ASSERTIONS) assert (bcast_ss_batch > 0);
-  struct ibv_wc signal_send_wc;
-
-  // Do a Signaled Send every PREP_BCAST_SS_BATCH broadcasts (PREP_BCAST_SS_BATCH * (MACHINE_NUM - 1) messages)
-  if ((*br_tx) % bcast_ss_batch == 0)
-    flag_the_first_bcast_message_signaled(q_info, send_wr);
-
-  (*br_tx)++;
-  if ((*br_tx) % bcast_ss_batch == bcast_ss_batch - 1) {
-    poll_cq(dgram_send_cq, 1, &signal_send_wc, mes);
-  }
-  // Have the last message of each broadcast pointing to the first message of the next bcast
-  if (br_i > 0)
-    last_mes_of_bcast_point_to_frst_mes_of_next_bcast(br_i, q_info, send_wr);
-}
-
 
 static inline void selective_signaling_for_unicast(uint64_t *tx, int ss_batch,
                                                    struct ibv_send_wr *send_wr,
@@ -220,6 +255,31 @@ static inline void selective_signaling_for_unicast(uint64_t *tx, int ss_batch,
   }
   (*tx)++;
 }
+
+
+
+
+static inline void form_bcast_links(uint64_t *br_tx, int bcast_ss_batch, quorum_info_t *q_info,
+                                    uint16_t br_i, struct ibv_send_wr *send_wr,
+                                    struct ibv_cq *dgram_send_cq, const char *mes, uint16_t t_id)
+{
+  if (ENABLE_ASSERTIONS) assert (bcast_ss_batch > 0);
+  struct ibv_wc signal_send_wc;
+
+  // Do a Signaled Send every PREP_BCAST_SS_BATCH broadcasts (PREP_BCAST_SS_BATCH * (MACHINE_NUM - 1) messages)
+  if ((*br_tx) % bcast_ss_batch == 0)
+    flag_the_first_bcast_message_signaled(q_info, send_wr);
+
+  (*br_tx)++;
+  if ((*br_tx) % bcast_ss_batch == bcast_ss_batch - 1) {
+    poll_cq(dgram_send_cq, 1, &signal_send_wc, mes);
+  }
+  // Have the last message of each broadcast pointing to the first message of the next bcast
+  if (br_i > 0)
+    last_mes_of_bcast_point_to_frst_mes_of_next_bcast(br_i, q_info, send_wr);
+}
+
+
 
 
 #endif //KITE_RDMA_GEN_UTIL_H
