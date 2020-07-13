@@ -1,67 +1,14 @@
 //
-// Created by vasilis on 10/07/20.
+// Created by vasilis on 13/07/20.
 //
+#include "multicast.h"
 
-#ifndef ODYSSEY_MULTICAST_H
-#define ODYSSEY_MULTICAST_H
-
-
-#include "top.h"
-
-// This helps us set up the necessary rdma_cm_ids for the multicast groups
-struct cm_qps
+int max_int(int a, int b)
 {
-  struct rdma_cm_id **cma_id;
-  struct ibv_pd* pd;
-  struct ibv_cq** cq;
-};
-
-
-// This helps us set up the multicasts
-typedef struct mcast_init
-{
-  //int	t_id;
-  struct rdma_event_channel *channel;
-  struct sockaddr_storage *dst_in;
-  struct sockaddr **dst_addr;
-  struct sockaddr_storage src_in;
-  struct sockaddr *src_addr;
-  struct cm_qps *cm_qp;
-  //Send-only stuff
-  struct rdma_ud_param *mcast_ud_param;
-
-} mcast_init_t;
-
-typedef struct mcast_context {
-  mcast_init_t *init;
-  uint16_t groups_num;
-  uint16_t machine_num;
-  uint32_t *recv_q_depth;
-  uint16_t *group_to_send_to;
-  void *buf;
-  size_t buff_size;
-  uint16_t flow_num;
-  uint16_t *groups_per_flow;
-  uint16_t send_qp_num;
-  uint16_t recv_qp_num;
-  uint16_t t_id;
-} mcast_context_t;
-
-
-// this contains all data we need to perform our mcasts
-typedef struct mcast_cb {
-  struct ibv_cq **recv_cq;
-  struct ibv_qp **recv_qp;
-  struct ibv_mr *recv_mr;
-  struct ibv_ah **send_ah;
-  uint32_t *qpn;
-  uint32_t *qkey;
-} mcast_cb_t;
-
-
-
+  return a > b ? a : b;
+}
 // wrapper around getaddrinfo socket function
-static int get_addr(char *dst, struct sockaddr *addr)
+int get_addr(char *dst, struct sockaddr *addr)
 {
   struct addrinfo *res;
   int ret;
@@ -76,14 +23,14 @@ static int get_addr(char *dst, struct sockaddr *addr)
 }
 
 //Handle the addresses
-static void resolve_addresses(mcast_context_t* mcast_cont)
+void resolve_addresses(mcast_context_t* mcast_cont)
 {
   mcast_init_t *init = mcast_cont->init;
   int ret, i, t_id = mcast_cont->t_id;
   char mcast_addr[40];
   // Source addresses (i.e. local IPs)
   init->src_addr = (struct sockaddr*)&init->src_in;
-  ret = get_addr(local_ip, ((struct sockaddr *)&init->src_in)); // to bind
+  ret = get_addr(mcast_cont->local_ip, ((struct sockaddr *)&init->src_in)); // to bind
   if (ret) printf("Client: failed to get src address \n");
   for (i = 0; i < mcast_cont->groups_num; i++) {
     ret = rdma_bind_addr(init->cm_qp->cma_id[i], init->src_addr);
@@ -101,7 +48,7 @@ static void resolve_addresses(mcast_context_t* mcast_cont)
 }
 
 // Set up the Send and Receive Qps for the multicast
-static void set_up_mcast_qps(mcast_context_t* mcast_cont)
+void set_up_mcast_qps(mcast_context_t* mcast_cont)
 {
   struct cm_qps *qps = mcast_cont->init->cm_qp;
   uint32_t *max_recv_q_depth = mcast_cont->recv_q_depth;
@@ -135,11 +82,11 @@ static void set_up_mcast_qps(mcast_context_t* mcast_cont)
 }
 
 // Initial function to call to setup multicast, this calls the rest of the relevant functions
-static void setup_multicast(mcast_context_t* mcast_cont)
+void setup_multicast(mcast_context_t* mcast_cont)
 {
   int ret;
   uint16_t t_id = mcast_cont->t_id;
-  static enum rdma_port_space port_space = RDMA_PS_UDP;
+  enum rdma_port_space port_space = RDMA_PS_UDP;
   mcast_init_t *init = mcast_cont->init;
   // Create the channel
   init->channel = rdma_create_event_channel();
@@ -178,17 +125,18 @@ static void setup_multicast(mcast_context_t* mcast_cont)
         bool joined = false;
         switch (event->event) {
           case RDMA_CM_EVENT_ADDR_RESOLVED:
-            if (flow_i >= mcast_cont->recv_qp_num) {
-              qp_i = mcast_cont->recv_qp_num; // this means we are not interested to receive from this flow
-            }
-              // We do not want to register the recv_qp that we will use to the mcast group that we own
-              // (sub_group_i.e. sub_group_i == machine_id)
-            else if (flow_i < mcast_cont->send_qp_num &&  sub_group_i == machine_id) {
-              qp_i = mcast_cont->recv_qp_num; // this is a useless qp
-            }
-            else qp_i = flow_i; // this recv_qp will be used
-            //printf("Worker %u uses recvp qp %u in group %u \n", t_id, qp_i, group_i);
-
+            if (mcast_cont->recv_qp_num == 0) qp_i = 0;
+            else {
+              // We do not want to register the recv_qp to this group, either because we are sending to it
+              // or because we are not interested in the flow
+              if (is_sender || (!mcast_cont->recvs_from_flow[flow_i])) {
+                qp_i = mcast_cont->recv_qp_num; // this means we are not interested to receive from this flow
+              }
+              else { // we are registering a valid recv_qp_to this group
+                assert(!is_sender); assert(mcast_cont->recvs_from_flow[flow_i]);
+                qp_i = flow_i;
+              }
+            } // this recv_qp will be used
             ret = rdma_join_multicast(init->cm_qp->cma_id[qp_i], init->dst_addr[group_i], init);
             if (ret) printf("unable to join multicast \n");
             break;
@@ -211,7 +159,7 @@ static void setup_multicast(mcast_context_t* mcast_cont)
 }
 
 
-static mcast_cb_t *construct_mcast_cb(mcast_context_t* mcast_cont)
+mcast_cb_t *construct_mcast_cb(mcast_context_t* mcast_cont)
 {
   mcast_cb_t* mcast_cb = (mcast_cb_t*) malloc(sizeof(mcast_cb_t));
 
@@ -224,39 +172,68 @@ static mcast_cb_t *construct_mcast_cb(mcast_context_t* mcast_cont)
   return mcast_cb;
 }
 
-static mcast_context_t* construct_mcast_cont(uint16_t flow_num, uint16_t recv_qp_num,
-                                             uint16_t send_num,
-                                             uint16_t *active_bcast_machine_num,
-                                             uint32_t *recv_q_depth,
-                                             uint16_t *group_to_send_to,
-                                             void *buf, size_t buff_size,
-                                             uint16_t t_id)
-{
-  mcast_context_t* mcast_cont = (mcast_context_t*) malloc(sizeof(mcast_context_t));
 
+void check_context_inputs(uint16_t flow_num, uint16_t recv_qp_num,
+                                 uint16_t send_num,
+                                 uint16_t *groups_per_flow,
+                                 uint32_t *recv_q_depth,
+                                 uint16_t *group_to_send_to,
+                                 bool *recvs_from_flow)
+{
   assert(flow_num > 0);
   assert(recv_qp_num > 0 || send_num > 0);
   assert(recv_qp_num <= flow_num);
   assert(send_num <= flow_num);
   for (int i = 0; i < recv_qp_num; ++i) {
-    assert((recv_q_depth + i) != NULL);
-    assert(recv_q_depth[i] > 1);
+
   }
   for (int i = 0; i < flow_num; ++i) {
-    assert((active_bcast_machine_num + i) != NULL);
-    assert(active_bcast_machine_num[i] > 0);
+    assert((groups_per_flow + i) != NULL);
+    assert(groups_per_flow[i] > 0);
   }
 
   if (send_num > 0) {
     int correct_groups_found = 0;
     for (int i = 0; i < flow_num; ++i) {
       assert((group_to_send_to + i) != NULL);
-      if (group_to_send_to[i] < active_bcast_machine_num[i])
+      if (group_to_send_to[i] < groups_per_flow[i])
         correct_groups_found++;
     }
     assert(correct_groups_found == send_num);
   }
 
+  if (recv_qp_num > 0) {
+    int total_recv_groups = 0;
+    for (int i = 0; i < flow_num; ++i) {
+      assert((recv_q_depth + i) != NULL);
+      assert(recv_q_depth[i] >= 1);
+      assert((recvs_from_flow + i) != NULL);
+      if (recvs_from_flow[i]) {
+        total_recv_groups++;
+        assert(recv_q_depth[i] > 1);
+      }
+    }
+    assert(total_recv_groups == recv_qp_num);
+  }
+
+}
+
+mcast_context_t* construct_mcast_cont(uint16_t flow_num, uint16_t recv_qp_num,
+                                             uint16_t send_num,
+                                             uint16_t *groups_per_flow,
+                                             uint32_t *recv_q_depth,
+                                             uint16_t *group_to_send_to,
+                                             bool *recvs_from_flow,
+                                             const char *local_ip,
+                                             void *buf, size_t buff_size,
+                                             uint16_t t_id)
+{
+
+  check_context_inputs(flow_num, recv_qp_num, send_num,
+                       groups_per_flow,
+                       recv_q_depth, group_to_send_to,
+                       recvs_from_flow);
+  mcast_context_t* mcast_cont = (mcast_context_t*) malloc(sizeof(mcast_context_t));
   mcast_cont->flow_num = flow_num;
 
   mcast_cont->recv_qp_num = recv_qp_num; // how many flows you want to receive from
@@ -264,11 +241,14 @@ static mcast_context_t* construct_mcast_cont(uint16_t flow_num, uint16_t recv_qp
   mcast_cont->buf = buf;
   mcast_cont->buff_size = buff_size;
   mcast_cont->t_id = t_id;
+  mcast_cont->local_ip = malloc(16 * sizeof(char));
+  strcpy(mcast_cont->local_ip, local_ip);
 
 
   mcast_cont->recv_q_depth = recv_q_depth;
-  mcast_cont->groups_per_flow = active_bcast_machine_num;
+  mcast_cont->groups_per_flow = groups_per_flow;
   mcast_cont->group_to_send_to = group_to_send_to;
+  mcast_cont->recvs_from_flow = recvs_from_flow;
 
   mcast_cont->groups_num = 0;
   for (int j = 0; j < flow_num; ++j) {
@@ -290,7 +270,7 @@ static mcast_context_t* construct_mcast_cont(uint16_t flow_num, uint16_t recv_qp
   // To be able to rdma_join_multicast we need to provide a cma_id
   // Since we do not care about the group, we can t give a cma_id with a recv_qp we are using
   // Therefore in the case where we do not already have redundant cma_ids, we have to allocate a redundant one
-  uint16_t cma_id_num = (uint16_t) (MAX(mcast_cont->groups_num, (mcast_cont->recv_qp_num + 1)));
+  uint16_t cma_id_num = (uint16_t) (max_int(mcast_cont->groups_num, (mcast_cont->recv_qp_num + 1)));
   cm->cma_id = calloc(cma_id_num, sizeof(struct rdma_cm_id*));
   cm->cq = calloc(mcast_cont->groups_num, sizeof(struct ibv_cq*));
 
@@ -299,7 +279,7 @@ static mcast_context_t* construct_mcast_cont(uint16_t flow_num, uint16_t recv_qp
 }
 
 
-static void destroy_mcast_cont(mcast_context_t* mcast_cont)
+void destroy_mcast_cont(mcast_context_t* mcast_cont)
 {
   free(mcast_cont->init->dst_in);
   free(mcast_cont->init->dst_addr);
@@ -315,78 +295,24 @@ static void destroy_mcast_cont(mcast_context_t* mcast_cont)
   free(mcast_cont);
 }
 
-/*------------------------MULTICAST EXPLANATION-----------------
- * We will create N multicast groups in the switch.
- * For each group we need a unique IP that will be in mcast_cont->init->dst_in.
- * We create the different addresses in resolve_addresses()
- * For each group we need one struct rdma_cm_id (i.e.mcast_cont->init->cm_qp->cma_id).
- * rdma_resolve_addr() will associate the unique dst_in with the unique rdma_cm_ids
- * ---
- * This is where it gets tricky. The expected patter is that with each rdma_cm_id, we create one
- * QP, such that we have one QP per multicast group.
- * However, this is not what we want.
- * The reason is that ALL messages that go to a multicast group are forwarded to all receive QPs that are registered
- * This means that if we were to associate one multicast group with one logical flow (e.g. broadcasting writes),
- * then we would be receiving the messages we are broadcasting.
- *
- * To avoid this we do something different:
- * For each logical flow, we create one multicast group for each active broadcaster.
- * For 5 machines all broadcasting writes we must do the following:
- * 1) Create 5 multicast groups
- * Each machine broadcasts to one group
- * Each machine receives from all groups except one -- the one it broadcasts to
- * (so that it does not receive its own messages)
- *
- * Therefore, we do not need one QP per rdma_cm_id.
- * This is essentially an anti-pattern and creates the complexity.
- *
- * To Receive from a broadcast group we must:
- * -- Create a qp (rdma_create_qp) and a cq(ibv_create_cq) and associated with an rdma_cm_id.
- * -- To register then to the multicast group we must rdma_join_multicast()
- *    with the dst_address using that rdma_cm_id
- *
- * To Send to broadcast group we need not make use of the QPs (!)
- * We need only use the parameters of the group (rdma_cm_event->param.ud) to set up our regular WRs
- * I.e. we will use whatever send QP we do for unicasts,
- * but we will simply change the parameters of the send_Wrs
- * Then the sent messages will find the multicast group in the switch
- * We get the rdma_cm_event->param.ud when rdma_cm_event->event == RDMA_CM_EVENT_MULTICAST_JOIN
- * Therefore, we need to save that, for the multicast group we are interested in
- *
- * After calling setuo_multicast(), we simply pass iny the useful attributes to mcast_cb,
- * Finally, we reigster the buffer, where received messages will arrive, this could be done
- * by the client directly, using their own protection domain (pd)
- *
- * HOW TO USE THE CB:
- * -- Receive:
- * Replace your regualar recv cq and qp with the ones int he qp
- * Use the mcast_cb->recv_mr->lkey when posting receives
- * -- Send
- * Use the send_ah, qpn and_qkey to set up your send work requests
- *
- *
- * Input explanation:
- *  flow_num : how many distinct logical multicast flows (e.g. prepares and commits for Zookeeper)
- *  recv_qp_num : in how many flows you want to receive from
- *
- * */
 
-// TODO add a bool recieve_per_flow input to allow to not receive in some flow
-
-static mcast_cb_t* create_mcast_cb(uint16_t flow_num,
+mcast_cb_t* create_mcast_cb(uint16_t flow_num,
                                    uint16_t recv_qp_num,
                                    uint16_t send_num,
-                                   uint16_t *active_bcast_machine_num,
+                                   uint16_t *groups_per_flow,
                                    uint32_t *recv_q_depth,
                                    uint16_t *group_to_send_to,
+                                   bool *recvs_from_flow,
+                                   const char *local_ip,
                                    void *buf, size_t buff_size,
                                    uint16_t t_id)
 {
 
 
   mcast_context_t* mcast_cont = construct_mcast_cont(flow_num, recv_qp_num, send_num,
-                                                     active_bcast_machine_num,
+                                                     groups_per_flow,
                                                      recv_q_depth, group_to_send_to,
+                                                     recvs_from_flow, local_ip,
                                                      buf, buff_size, t_id);
   setup_multicast(mcast_cont);
 
@@ -406,7 +332,7 @@ static mcast_cb_t* create_mcast_cb(uint16_t flow_num,
   if (recv_qp_num > 0)
     mcast_cb->recv_mr = ibv_reg_mr(init->cm_qp->pd, mcast_cont->buf,
                                    mcast_cont->buff_size, IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_READ |
-                                                        IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_ATOMIC);
+                                                          IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_ATOMIC);
 
   destroy_mcast_cont(mcast_cont);
 
@@ -414,8 +340,55 @@ static mcast_cb_t* create_mcast_cb(uint16_t flow_num,
   return mcast_cb;
 }
 
+// Showcasing how to use mutlicast,
+// Note how you are using an existing qp and cq to send.
+// However to recv you use the qp and cq from the mcast_cb
+void multicast_testing(mcast_cb_t *mcast_cb, int t_id, int m_id,
+                              uint8_t mcast_qp_id, uint16_t broadcasters_num,
+                              void *buf, struct ibv_qp *qp, struct ibv_cq *cq) // W_QP_ID
+{
+
+  struct ibv_wc mcast_wc;
+  printf ("Client: Multicast Qkey %u and qpn %u \n", mcast_cb->qkey[mcast_qp_id], mcast_cb->qpn[mcast_qp_id]);
 
 
+  struct ibv_sge mcast_sg;
+  struct ibv_send_wr mcast_wr;
+  struct ibv_send_wr *mcast_bad_wr;
 
+  memset(&mcast_sg, 0, sizeof(mcast_sg));
+  mcast_sg.addr	  = (uintptr_t) buf;
+  mcast_sg.length = 10;
+  //mcast_sg.lkey	need not be filled
 
-#endif //ODYSSEY_MULTICAST_H
+  memset(&mcast_wr, 0, sizeof(mcast_wr));
+  mcast_wr.wr_id      = 0;
+  mcast_wr.sg_list    = &mcast_sg;
+  mcast_wr.num_sge    = 1;
+  mcast_wr.opcode     = IBV_WR_SEND_WITH_IMM;
+  mcast_wr.send_flags = IBV_SEND_SIGNALED | IBV_SEND_INLINE;
+  mcast_wr.imm_data   = (uint32_t) (t_id + 120 + (m_id * 10));
+  mcast_wr.next       = NULL;
+
+  /// Use the mcast_cb here to send
+  mcast_wr.wr.ud.ah          = mcast_cb->send_ah[mcast_qp_id];
+  mcast_wr.wr.ud.remote_qpn  = mcast_cb->qpn[mcast_qp_id];
+  mcast_wr.wr.ud.remote_qkey = mcast_cb->qkey[mcast_qp_id];
+
+  if (ibv_post_send(qp, &mcast_wr, &mcast_bad_wr)) {
+    fprintf(stderr, "Error, ibv_post_send() failed\n");
+    assert(false);
+  }
+
+  printf("THe mcast was sent, I am waiting for confirmation imm data %d\n", mcast_wr.imm_data);
+  while (ibv_poll_cq(cq, 1, &mcast_wc) == 0);
+  assert(mcast_wc.status != 0);
+  printf("The mcast was sent \n");
+
+  for (int i = 0; i < broadcasters_num; ++i) {
+    while (ibv_poll_cq(mcast_cb->recv_cq[mcast_qp_id], 1, &mcast_wc) == 0);
+    printf("Worker %d imm data recved %d \n", t_id, mcast_wc.imm_data);
+    assert(mcast_wc.status != 0);
+  }
+  exit(0);
+}

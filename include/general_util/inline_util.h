@@ -11,7 +11,7 @@
 #include "rdma_gen_util.h"
 #include "generic_inline_util.h"
 #include "config_util.h"
-#include "multicast.h"
+#include "../multicast/multicast.h"
 
 
 

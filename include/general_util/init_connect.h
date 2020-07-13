@@ -4,7 +4,9 @@
 
 #ifndef KITE_INIT_CONNECT_H
 #define KITE_INIT_CONNECT_H
-
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
 #include "top.h"
 #include "hrd.h"
 
@@ -33,55 +35,7 @@ static int spawn_stats_thread() {
 ------------------------------MULTICAST --------------------------------------
 ---------------------------------------------------------------------------*/
 
-// call to test the multicast
-static void multicast_testing(mcast_cb_t *mcast, int clt_gid,
-                              uint8_t mcast_qp_id,
-                              hrd_ctrl_blk_t *cb, uint8_t qp_id) // W_QP_ID
-{
 
-  struct ibv_wc mcast_wc;
-  printf ("Client: Multicast Qkey %u and qpn %u \n", mcast->qkey[mcast_qp_id], mcast->qpn[mcast_qp_id]);
-
-
-  struct ibv_sge mcast_sg;
-  struct ibv_send_wr mcast_wr;
-  struct ibv_send_wr *mcast_bad_wr;
-
-  memset(&mcast_sg, 0, sizeof(mcast_sg));
-  mcast_sg.addr	  = (uintptr_t)cb->dgram_buf;
-  mcast_sg.length = 10;
-  //mcast_sg.lkey	  = cb->dgram_buf_mr->lkey;
-
-  memset(&mcast_wr, 0, sizeof(mcast_wr));
-  mcast_wr.wr_id      = 0;
-  mcast_wr.sg_list    = &mcast_sg;
-  mcast_wr.num_sge    = 1;
-  mcast_wr.opcode     = IBV_WR_SEND_WITH_IMM;
-  mcast_wr.send_flags = IBV_SEND_SIGNALED | IBV_SEND_INLINE;
-  mcast_wr.imm_data   = (uint32_t) (clt_gid + 120 + (machine_id * 10));
-  mcast_wr.next       = NULL;
-
-  mcast_wr.wr.ud.ah          = mcast->send_ah[mcast_qp_id];
-  mcast_wr.wr.ud.remote_qpn  = mcast->qpn[mcast_qp_id];
-  mcast_wr.wr.ud.remote_qkey = mcast->qkey[mcast_qp_id];
-
-  if (ibv_post_send(cb->dgram_qp[qp_id], &mcast_wr, &mcast_bad_wr)) {
-    fprintf(stderr, "Error, ibv_post_send() failed\n");
-    assert(false);
-  }
-
-  printf("THe mcast was sent, I am waiting for confirmation imm data %d\n", mcast_wr.imm_data);
-  hrd_poll_cq(cb->dgram_send_cq[qp_id], 1, &mcast_wc);
-  printf("The mcast was sent \n");
-  hrd_poll_cq(mcast->recv_cq[mcast_qp_id], 1, &mcast_wc);
-  printf("Client %d imm data recved %d \n", clt_gid, mcast_wc.imm_data);
-  hrd_poll_cq(mcast->recv_cq[mcast_qp_id], 1, &mcast_wc);
-  printf("Client %d imm data recved %d \n", clt_gid, mcast_wc.imm_data);
-  hrd_poll_cq(mcast->recv_cq[mcast_qp_id], 1, &mcast_wc);
-  printf("Client %d imm data recved %d \n", clt_gid, mcast_wc.imm_data);
-
-  exit(0);
-}
 //--------------------------------------------------
 //--------------PUBLISHING QPS---------------------
 //--------------------------------------------------

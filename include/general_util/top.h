@@ -32,16 +32,8 @@
 #include <malloc.h>
 #include <infiniband/verbs.h>
 #include <stdatomic.h>
-
-
-// Multicast
-#include <rdma/rdma_cma.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <byteswap.h>
-#include <netinet/in.h>
-#include <netdb.h>
 #include <stdbool.h>
+
 
 enum {error_sys, kite_sys, zookeeper_sys};
 
@@ -239,10 +231,6 @@ enum {
 
 #define PER_SESSION_REQ_NUM (MS_WRITES_NUM + 4) //(HM_WRITES_NUM + 15) //(TREIBER_WRITES_NUM + 3) //   (HM_WRITES_NUM + 15) //   ((2 * PC_WRITES_NUM) + 5)
 #define CLIENT_DEBUG 0
-
-
-
-
 
 
 /*-------------------------------------------------
