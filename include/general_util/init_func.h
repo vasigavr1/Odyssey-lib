@@ -19,7 +19,7 @@ static void static_assert_compile_parameters()
   static_assert(SESSIONS_PER_THREAD < K_64, "");
   static_assert(SESSIONS_PER_THREAD > 0, "");
   static_assert(VALUE_SIZE % 8 == 0 || !USE_BIG_OBJECTS,
-    "Big objects are enabled but the value size is not a multiple of 8");
+    "Big objects are enabled but the value capacity is not a multiple of 8");
 
   static_assert(!(ENABLE_CLIENTS && !CLIENTS_PER_MACHINE), "");
   static_assert(sizeof(client_op_t) == CLIENT_OP_SIZE, "");

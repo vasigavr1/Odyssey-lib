@@ -414,21 +414,22 @@ static inline bool is_global_ses_id_local(uint32_t glob_sess_id, uint16_t t_id)
 /// to infer their buffer availability
 
 // Generic function to mirror buffer spaces--used when elements are added
-static inline void add_to_the_mirrored_buffer(struct fifo *mirror_buf, uint8_t coalesce_num, uint16_t number_of_fifos,
+static inline void add_to_the_mirrored_buffer(struct fifo *mirror_buf, uint8_t coalesce_num,
+                                              uint16_t number_of_fifos,
                                               uint32_t max_size, quorum_info_t *q_info)
 {
   for (uint16_t i = 0; i < number_of_fifos; i++) {
     uint32_t push_ptr = mirror_buf[i].push_ptr;
     uint16_t *fifo = (uint16_t *) mirror_buf[i].fifo;
-    fifo[push_ptr] = (uint16_t)coalesce_num;
+    fifo[push_ptr] = (uint16_t) coalesce_num;
     MOD_INCR(mirror_buf[i].push_ptr, max_size);
-    mirror_buf[i].size++;
-    if (mirror_buf[i].size > max_size) {
+    mirror_buf[i].capacity++;
+    if (mirror_buf[i].capacity > max_size) {
       // this may noy be an error if there is a failure
       assert(q_info != NULL);
       assert(q_info->missing_num > 0);
     }
-    //if (ENABLE_ASSERTIONS) assert(mirror_buf[i].size <= max_size);
+    //if (ENABLE_ASSERTIONS) assert(mirror_buf[i].capacity <= max_size);
   }
 }
 
@@ -437,9 +438,9 @@ static inline uint16_t remove_from_the_mirrored_buffer(struct fifo *mirror_buf_,
                                                        uint16_t t_id, uint8_t fifo_id, uint32_t max_size)
 {
   struct fifo *mirror_buf = &mirror_buf_[fifo_id];
-  uint16_t *fifo = (uint16_t *)mirror_buf->fifo;
+  uint16_t *fifo = (uint16_t *) mirror_buf->fifo;
   uint16_t new_credits = 0;
-  if (ENABLE_ASSERTIONS && mirror_buf->size == 0) {
+  if (ENABLE_ASSERTIONS && mirror_buf->capacity == 0) {
     my_printf(red, "remove_num %u, ,mirror_buf->pull_ptr %u fifo_id %u  \n",
               remove_num, mirror_buf->pull_ptr, fifo_id);
     assert(false);
@@ -449,12 +450,12 @@ static inline uint16_t remove_from_the_mirrored_buffer(struct fifo *mirror_buf_,
     if (fifo[pull_ptr] <= remove_num) {
       remove_num -= fifo[pull_ptr];
       MOD_INCR(mirror_buf->pull_ptr, max_size);
-      if (ENABLE_ASSERTIONS && mirror_buf->size == 0) {
+      if (ENABLE_ASSERTIONS && mirror_buf->capacity == 0) {
         my_printf(red, "remove_num %u, ,mirror_buf->pull_ptr %u fifo_id %u  \n",
                   remove_num, mirror_buf->pull_ptr, fifo_id);
         assert(false);
       }
-      mirror_buf->size--;
+      mirror_buf->capacity--;
       new_credits++;
     }
     else {

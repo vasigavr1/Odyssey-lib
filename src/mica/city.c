@@ -478,10 +478,10 @@ static void CityHashCrc256Long(const char *s, size_t len,
 
 // Requires len < 240.
 static void CityHashCrc256Short(const char *s, size_t len, uint64 *result) {
-  char buf[240];
-  memcpy(buf, s, len);
-  memset(buf + len, 0, 240 - len);
-  CityHashCrc256Long(buf, 240, ~(uint32)(len), result);
+  char recv_buf[240];
+  memcpy(recv_buf, s, len);
+  memset(recv_buf + len, 0, 240 - len);
+  CityHashCrc256Long(recv_buf, 240, ~(uint32)(len), result);
 }
 
 void CityHashCrc256(const char *s, size_t len, uint64 *result) {

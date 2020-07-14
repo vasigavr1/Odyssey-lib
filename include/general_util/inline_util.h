@@ -11,6 +11,7 @@
 #include "rdma_gen_util.h"
 #include "generic_inline_util.h"
 #include "config_util.h"
+#include "network_context.h"
 #include "../multicast/multicast.h"
 
 
@@ -37,7 +38,7 @@ static inline void create_inputs_of_op(uint8_t **value_to_write, uint8_t **value
   }
   else {
     (*opcode) = trace->opcode;
-    *(uint64 *) (key) = *(uint64 *) trace->key_hash;
+    *(uint64_t *) (key) = *(uint64_t *) trace->key_hash;
     (*real_val_len) = (uint32_t) VALUE_SIZE;
     (*value_to_write) = op_value;
     (*value_to_read) = op_value;

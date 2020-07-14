@@ -15,8 +15,8 @@ hrd_ctrl_blk_init(int local_hid, int port_index,
 
 
 	// my_printf(red, "HRD: creating control block %d: port %d, socket %d, "
-	// 	"conn qps %d, UC %d, conn buf %d bytes (key %d), "
-	// 	"dgram qps %d, dgram buf %d bytes (key %d)\n",
+	// 	"conn qps %d, UC %d, conn recv_buf %d bytes (key %d), "
+	// 	"dgram qps %d, dgram recv_buf %d bytes (key %d)\n",
 	// 	local_hid, port_index, numa_node_id,
 	// 	num_conn_qps, use_uc, conn_buf_size, conn_buf_shm_key,
 	// 	num_dgram_qps, dgram_buf_size, dgram_buf_shm_key);
@@ -129,6 +129,9 @@ hrd_ctrl_blk_init(int local_hid, int port_index,
 	 * Create and register connected QP RDMA buffer.
 	 */
 	if(num_conn_qps >= 1) assert(false);
+
+	free(recv_q_depth);
+	free(send_q_depth);
 	return cb;
 }
 
@@ -236,10 +239,13 @@ void hrd_create_dgram_qps(hrd_ctrl_blk_t *cb)
 	assert(cb->num_dgram_qps >= 1 && cb->dev_port_id >= 1);
 
 	for(i = 0; i < cb->num_dgram_qps; i++) {
+    //printf("Send q_depth %d\n",cb->send_q_depth[i]);
+    assert(cb->send_q_depth + i != NULL);
 		cb->dgram_send_cq[i] = ibv_create_cq(cb->ctx,
 			cb->send_q_depth[i], NULL, NULL, 0);
 		assert(cb->dgram_send_cq[i] != NULL);
 
+		//printf("receive q_depth %d\n",cb->recv_q_depth[i]);
 		cb->dgram_recv_cq[i] = ibv_create_cq(cb->ctx,
 			cb->recv_q_depth[i], NULL, NULL, 0);
 		assert(cb->dgram_recv_cq[i] != NULL);

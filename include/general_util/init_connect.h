@@ -125,7 +125,7 @@ static void set_up_qp_attr_client(int qp_num)
   assert(valread == recv_size);
   int cmp = memcmp(qp_attr_to_send, qp_attr_to_send, send_size);
   assert(cmp == 0);
-  // printf("Received all attributes, size %ld \n", sizeof(all_qp_attr_t));
+  // printf("Received all attributes, capacity %ld \n", sizeof(all_qp_attr_t));
 }
 
 // Machine 0 acts as a "server"; it receives all qp attributes,
@@ -175,7 +175,7 @@ static void set_up_qp_attr_server(int qp_num)
     size_t recv_size = WORKERS_PER_MACHINE * qp_num * sizeof(struct qp_attr);
     valread = (int) recv(new_socket[rm_i], &all_qp_attr->wrkr_qp[rm_i + 1][0][0], recv_size, MSG_WAITALL);
     assert(valread == recv_size);
-    //printf("Server received qp_attributes from machine %u size %ld \n",
+    //printf("Server received qp_attributes from machine %u capacity %ld \n",
     //       rm_i + 1, recv_size);
   }
   size_t send_size = sizeof(qp_attr_t) * MACHINE_NUM * WORKERS_PER_MACHINE * qp_num;

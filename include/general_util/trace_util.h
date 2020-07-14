@@ -173,7 +173,7 @@ static trace_t* manufacture_trace(int t_id)
 {
   trace_t *trace = (trace_t *) calloc ((TRACE_SIZE + 1), sizeof(trace_t));
   struct timespec time;
-  //struct random_data *buf;
+  //struct random_data *recv_buf;
   clock_gettime(CLOCK_MONOTONIC, &time);
   uint seed = (uint)(time.tv_nsec + ((machine_id * WORKERS_PER_MACHINE) + t_id) + (uint64_t)trace);
   srand (seed);

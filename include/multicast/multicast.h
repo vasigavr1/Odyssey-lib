@@ -138,8 +138,8 @@ typedef struct mcast_cb {
  *      If true for flow i, then we the recv_qpm will be joined for all subgroups of flow = i, except the one we send to (if any)
  *      It can be NUll if recv_qp_num == 0
  *  -- local_ip: the ip of the local machine
- *  -- buf: the buffer that will be used to store received messages need to be reigstered
- *  -- buf_size: size in Bytes of buf
+ *  -- recv_buf: the buffer that will be used to store received messages need to be reigstered
+ *  -- recv_buf_size: capacity in Bytes of recv_buf
  *  -- t_id : the thread id
  * */
 

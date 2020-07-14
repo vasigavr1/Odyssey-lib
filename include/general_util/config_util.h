@@ -198,6 +198,8 @@ static inline void decrease_credits(uint16_t credits[][MACHINE_NUM], quorum_info
     }
 
     credits[vc][q_info->active_ids[i]] -= mes_sent;
+    //printf("credits %u for %u \n", credits[vc][q_info->active_ids[i]],
+    // q_info->active_ids[i]);
   }
 }
 

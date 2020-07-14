@@ -2,8 +2,8 @@
 // Created by vasilis on 23/06/2020.
 //
 
-#ifndef KITE_TOP_H
-#define KITE_TOP_H
+#ifndef ODYSSEY_TOP_H
+#define ODYSSEY_TOP_H
 
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
@@ -85,7 +85,7 @@ typedef struct key mica_key_t;
 #define KVS_SOCKET 0// (WORKERS_PER_MACHINE < 30 ? 0 : 1 )// socket where the cache is bind
 
 // CORE CONFIGURATION
-#define WORKERS_PER_MACHINE 20
+#define WORKERS_PER_MACHINE 1
 #define MACHINE_NUM 5
 #define SESSIONS_PER_THREAD 40
 #define ENABLE_CLIENTS 0
@@ -245,8 +245,8 @@ enum {
 	-----------------MULTICAST-------------------------
 --------------------------------------------------*/
 // Multicast defines are not used, but are kept them for possible extension
-#define ENABLE_MULTICAST_ 1
-#define ENABLE_MULTICAST ENABLE_MULTICAST_ //(COMPILED_SYSTEM  ==  kite_sys ? 0 : ENABLE_MULTICAST_)
+#define ENABLE_MULTICAST_ 0
+#define ENABLE_MULTICAST ENABLE_MULTICAST_
 #define MULTICAST_TESTING_ 0
 #define MULTICAST_TESTING (ENABLE_MULTICAST == 1 ? MULTICAST_TESTING_ : 0)
 
@@ -260,6 +260,7 @@ enum {
 #define MESSAGES_IN_BCAST (ENABLE_MULTICAST == 1 ? 1 : (REM_MACH_NUM))
 #define MESSAGES_IN_BCAST_BATCH MAX_BCAST_BATCH * MESSAGES_IN_BCAST //must be smaller than the q_depth
 
+#define MIN_SS_BATCH 127// The minimum SS batch
 //////////////////////////////////////////////////////
 /////////////~~~~GLOBALS~~~~~~/////////////////////////
 //////////////////////////////////////////////////////
@@ -416,13 +417,16 @@ extern uint64_t last_pushed_req[SESSIONS_PER_MACHINE];
 /////////////~~~~FUNCTIONS~~~~~~/////////////////////////
 //////////////////////////////////////////////////////
 
-struct fifo {
+typedef struct fifo {
   void *fifo;
   uint32_t push_ptr;
   uint32_t pull_ptr;
-  uint32_t size;
-
-};
+  uint32_t max_size; //in slots
+  uint32_t max_byte_size;
+  uint32_t capacity;
+  uint32_t net_capacity;
+  uint32_t *backwards_ptrs;
+} fifo_t;
 
 
 typedef enum {yellow, red, green, cyan, magenta, regular} color_t;
@@ -543,4 +547,6 @@ static inline void check_state_with_disallowed_flags(int num_of_flags, ...)
   }
 }
 
-#endif //KITE_TOP_H
+
+
+#endif //ODYSSEY_TOP_H
