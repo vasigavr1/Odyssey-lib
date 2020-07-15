@@ -188,16 +188,16 @@ static inline bool check_bcast_credits(uint16_t *credits,
   return true;
 }
 
-static inline void decrease_credits(uint16_t credits[][MACHINE_NUM], quorum_info_t *q_info,
-                                    uint16_t mes_sent, uint8_t vc)
+static inline void decrease_credits(uint16_t *credits, quorum_info_t *q_info,
+                                    uint16_t mes_sent)
 {
   for (uint8_t i = 0; i < q_info->active_num; i++) {
     if (ENABLE_ASSERTIONS) {
-      assert(credits[vc][q_info->active_ids[i]] >= mes_sent);
+      assert(credits[q_info->active_ids[i]] >= mes_sent);
       assert(q_info->active_ids[i] != machine_id && q_info->active_ids[i] < MACHINE_NUM);
     }
 
-    credits[vc][q_info->active_ids[i]] -= mes_sent;
+    credits[q_info->active_ids[i]] -= mes_sent;
     //printf("credits %u for %u \n", credits[vc][q_info->active_ids[i]],
     // q_info->active_ids[i]);
   }

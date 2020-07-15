@@ -14,12 +14,18 @@
 typedef enum{
   SEND_CREDITS_LDR_RECV_NONE,
   RECV_CREDITS,
-  SEND_UNICAST_REQ_RECV_REP,
-  SEND_UNICAST_REQ_RECV_LDR_REP,
-  SEND_UNICAST_REP_RECV_LDR_BCAST,
-  SEND_UNICAST_REP_TO_BCAST,
-  SEND_BCAST_LDR_RECV_UNICAST,
-  SEND_BCAST_RECV_UNICAST
+
+  SEND_UNI_REQ_RECV_REP,
+  SEND_UNI_REP_RECV_UNI_REQ,
+
+  SEND_UNI_REQ_RECV_LDR_REP,
+  SEND_UNI_REP_LDR_RECV_UNI_REQ,
+
+  SEND_BCAST_LDR_RECV_UNI,
+  SEND_UNI_REP_RECV_LDR_BCAST,
+
+  SEND_UNI_REP_TO_BCAST,
+  SEND_BCAST_RECV_UNI
 } flow_type_t;
 
 
@@ -43,7 +49,7 @@ typedef struct per_qp_meta {
   uint8_t leader_m_id; // if there exist
 
   uint32_t ss_batch;
-  uint16_t credits;
+  uint16_t *credits;
 
   fifo_t *recv_fifo;
   bool has_recv_fifo;
@@ -69,6 +75,7 @@ typedef struct per_qp_meta {
 
   uint64_t sent_tx; //how many messages have been sent
 
+  uint32_t completed_but_not_polled_writes;
 
 } per_qp_meta_t;
 
@@ -112,16 +119,17 @@ static void allocate_work_requests(per_qp_meta_t* qp_meta)
     case SEND_CREDITS_LDR_RECV_NONE:
       qp_meta->send_sgl = malloc(sizeof(struct ibv_sge));
       break;
-    case SEND_BCAST_LDR_RECV_UNICAST:
-    case SEND_BCAST_RECV_UNICAST:
+    case SEND_BCAST_LDR_RECV_UNI:
+    case SEND_BCAST_RECV_UNI:
       qp_meta->send_sgl = malloc(MAX_BCAST_BATCH * sizeof(struct ibv_sge));
       break;
     case RECV_CREDITS:
       break;
-    case SEND_UNICAST_REQ_RECV_REP:
-    case SEND_UNICAST_REQ_RECV_LDR_REP:
-    case SEND_UNICAST_REP_RECV_LDR_BCAST:
-    case SEND_UNICAST_REP_TO_BCAST:
+    case SEND_UNI_REQ_RECV_REP:
+    case SEND_UNI_REQ_RECV_LDR_REP:
+    case SEND_UNI_REP_RECV_LDR_BCAST:
+    case SEND_UNI_REP_TO_BCAST:
+    case SEND_UNI_REP_LDR_RECV_UNI_REQ:
       qp_meta->send_sgl = malloc(qp_meta->send_wr_num * sizeof(struct ibv_sge));
       break;
     default: assert(false);
@@ -139,9 +147,11 @@ static void create_per_qp_meta(per_qp_meta_t* qp_meta,
                                 uint32_t send_wr_num,
                                 uint32_t recv_wr_num,
                                 flow_type_t flow_type,
+
                                 uint32_t receipient_num,
                                 uint32_t remote_senders_num,
                                 uint32_t recv_fifo_slot_num,
+
                                 uint32_t recv_size,
                                 uint32_t send_size,
                                bool mcast_send,
@@ -159,7 +169,7 @@ static void create_per_qp_meta(per_qp_meta_t* qp_meta,
   qp_meta->pull_ptr = 0;
   qp_meta->push_ptr = 0;
   qp_meta->leader_m_id = leader_m_id;
-  qp_meta->credits = credits;
+
   qp_meta->recv_buf_slot_num = recv_fifo_slot_num;
   qp_meta->recv_buf_size = recv_fifo_slot_num * recv_size;
   qp_meta->recv_size = recv_size;
@@ -167,27 +177,40 @@ static void create_per_qp_meta(per_qp_meta_t* qp_meta,
   qp_meta->mcast_send = mcast_send;
   qp_meta->mcast_recv = mcast_recv;
   qp_meta->mcast_qp_id = mcast_qp_id;
+  qp_meta->completed_but_not_polled_writes = 0;
 
 
   switch (qp_meta->flow_type){
-    case SEND_BCAST_LDR_RECV_UNICAST:
-    case SEND_BCAST_RECV_UNICAST:
+    case SEND_BCAST_LDR_RECV_UNI:
+    case SEND_BCAST_RECV_UNI:
       qp_meta->ss_batch = (uint32_t) MAX((MIN_SS_BATCH / (receipient_num)), (MAX_BCAST_BATCH + 2));
       qp_meta->send_q_depth = ((qp_meta->ss_batch * receipient_num) + 10);
       break;
     case RECV_CREDITS:
       break;
     case SEND_CREDITS_LDR_RECV_NONE:
-    case SEND_UNICAST_REQ_RECV_REP:
-    case SEND_UNICAST_REQ_RECV_LDR_REP:
-    case SEND_UNICAST_REP_RECV_LDR_BCAST:
-    case SEND_UNICAST_REP_TO_BCAST:
+    case SEND_UNI_REQ_RECV_REP:
+    case SEND_UNI_REQ_RECV_LDR_REP:
+    case SEND_UNI_REP_RECV_LDR_BCAST:
+    case SEND_UNI_REP_TO_BCAST:
+    case SEND_UNI_REP_RECV_UNI_REQ:
+    case SEND_UNI_REP_LDR_RECV_UNI_REQ:
       qp_meta->ss_batch = (uint32_t) MAX(MIN_SS_BATCH, (send_wr_num + 2));
       qp_meta->send_q_depth = qp_meta->ss_batch + 3;
       break;
     default: assert(false);
   }
   qp_meta->recv_q_depth = recv_wr_num + 3;
+
+
+  if (credits > 0) {
+    int credit_rows =
+      receipient_num == 1 ? 1 : MACHINE_NUM;
+    qp_meta->credits = malloc(credit_rows * sizeof(uint16_t));
+    for (int cr_i = 0; cr_i < credit_rows; ++cr_i) {
+      qp_meta->credits[cr_i] = credits;
+    }
+  }
 
 
 
@@ -355,8 +378,8 @@ static void init_ctx_send_wrs(context_t *ctx)
   for (uint16_t qp_i = 0; qp_i < ctx->qp_num; ++qp_i) {
     per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_i];
     switch (qp_meta->flow_type){
-      case SEND_BCAST_LDR_RECV_UNICAST:
-      case SEND_BCAST_RECV_UNICAST:
+      case SEND_BCAST_LDR_RECV_UNI:
+      case SEND_BCAST_RECV_UNI:
         for (uint16_t br_i = 0; br_i < MAX_BCAST_BATCH; br_i++) {
           for (uint16_t i = 0; i < MESSAGES_IN_BCAST; i++) {
             uint16_t rm_id = (uint16_t) (i < ctx->m_id ? i : i + 1);
@@ -373,10 +396,11 @@ static void init_ctx_send_wrs(context_t *ctx)
           const_set_up_wr(ctx, qp_i, wr_i, 0, true, qp_meta->leader_m_id);
         }
         break;
-      case SEND_UNICAST_REQ_RECV_REP:
-      case SEND_UNICAST_REQ_RECV_LDR_REP:
-      case SEND_UNICAST_REP_RECV_LDR_BCAST:
-      case SEND_UNICAST_REP_TO_BCAST:
+      case SEND_UNI_REQ_RECV_REP:
+      case SEND_UNI_REQ_RECV_LDR_REP:
+      case SEND_UNI_REP_RECV_LDR_BCAST:
+      case SEND_UNI_REP_TO_BCAST:
+      case SEND_UNI_REP_LDR_RECV_UNI_REQ:
         for (uint16_t wr_i = 0; wr_i < qp_meta->send_wr_num; ++wr_i) {
           const_set_up_wr(ctx, qp_i, wr_i, wr_i, wr_i == qp_meta->send_wr_num - 1,
                           qp_meta->leader_m_id);
@@ -427,6 +451,8 @@ static int *get_send_q_depths(per_qp_meta_t* qp_meta, uint16_t qp_num)
   int *send_q_depth = (int *) malloc(qp_num * sizeof(int));
   for (int i = 0; i < qp_num; ++i) {
     send_q_depth[i] = qp_meta[i].send_q_depth;
+    if (send_q_depth[i] == 0) send_q_depth[i] = 1;
+    printf("Send q depth %u --> %u \n ", i, send_q_depth[i]);
   }
   return send_q_depth;
 }
@@ -459,22 +485,23 @@ static void set_up_ctx_mcast(context_t *ctx)
       flow_i++;
       assert(flow_i == qp_meta->mcast_qp_id);
       switch (qp_meta->flow_type){
-        case SEND_BCAST_LDR_RECV_UNICAST:
-        case SEND_UNICAST_REP_RECV_LDR_BCAST:
+        case SEND_BCAST_LDR_RECV_UNI:
+        case SEND_UNI_REP_RECV_LDR_BCAST:
           groups_per_flow[flow_i] = 1;
           if (qp_meta->mcast_send)
             group_to_send_to[flow_i] = 0;
           break;
-        case SEND_BCAST_RECV_UNICAST:
-        case SEND_UNICAST_REP_TO_BCAST:
+        case SEND_BCAST_RECV_UNI:
+        case SEND_UNI_REP_TO_BCAST:
           groups_per_flow[flow_i] = MACHINE_NUM;
           if (qp_meta->mcast_send)
             group_to_send_to[flow_i] = ctx->m_id;
           break;
         case RECV_CREDITS:
         case SEND_CREDITS_LDR_RECV_NONE:
-        case SEND_UNICAST_REQ_RECV_REP:
-        case SEND_UNICAST_REQ_RECV_LDR_REP:
+        case SEND_UNI_REQ_RECV_REP:
+        case SEND_UNI_REQ_RECV_LDR_REP:
+        case SEND_UNI_REP_LDR_RECV_UNI_REQ:
           assert(false);
         default: assert(false);
       }
@@ -506,6 +533,13 @@ static void init_rdma_ctx(context_t *ctx, hrd_ctrl_blk_t *cb)
   for (int qp_i = 0; qp_i < ctx->qp_num; ++qp_i) {
     ctx->rdma_ctx->local_id[qp_i] = hrd_get_local_lid(cb->dgram_qp[qp_i]->context,
                                                       cb->dev_port_id);
+  }
+}
+
+static void ctx_pre_post_recvs(context_t *ctx)
+{
+  for (int qp_i = 0; qp_i < ctx->qp_num; ++qp_i) {
+    per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_i];
   }
 }
 
