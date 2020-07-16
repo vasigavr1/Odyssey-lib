@@ -12,6 +12,7 @@
 #include "generic_inline_util.h"
 #include "config_util.h"
 #include "network_context.h"
+#include "fifo.h"
 #include "../multicast/multicast.h"
 
 

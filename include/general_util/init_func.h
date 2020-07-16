@@ -85,16 +85,16 @@ static void handle_program_inputs(int argc, char *argv[])
   int rm_id = 0;
   for ( int m_id = 0; m_id < MACHINE_NUM; m_id++) {
     assert(chars_array != NULL); // not enough IPs were passed
-    printf("ip %s \n", chars_array);
+    if (ENABLE_ASSERTIONS) printf("ip %s \n", chars_array);
     if (m_id ==  machine_id) {
       local_ip = (char *) (malloc(16));
       memcpy(local_ip, chars_array, strlen(chars_array) + 1);
-      printf("local_ip = %s  \n", local_ip);
+      if (ENABLE_ASSERTIONS) printf("local_ip = %s  \n", local_ip);
     }
     else {
       remote_ips[rm_id] = (char *) (malloc(16));
       memcpy(remote_ips[rm_id], chars_array, strlen(chars_array) + 1);
-      printf("remote_ip[%d] = %s  \n", rm_id, remote_ips[rm_id]);
+      if (ENABLE_ASSERTIONS) printf("remote_ip[%d] = %s  \n", rm_id, remote_ips[rm_id]);
       rm_id++;
     }
 

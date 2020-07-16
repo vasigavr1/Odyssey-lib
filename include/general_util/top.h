@@ -93,7 +93,7 @@ typedef struct key mica_key_t;
 #define CLIENTS_PER_MACHINE (ENABLE_CLIENTS ? CLIENTS_PER_MACHINE_ : 0)
 #define ENABLE_LOCK_FREE_READING 1
 
-#define ENABLE_ASSERTIONS 1
+#define ENABLE_ASSERTIONS 0
 
 #define PUT_A_MACHINE_TO_SLEEP 0
 #define MACHINE_THAT_SLEEPS 1
@@ -245,7 +245,7 @@ enum {
 	-----------------MULTICAST-------------------------
 --------------------------------------------------*/
 // Multicast defines are not used, but are kept them for possible extension
-#define ENABLE_MULTICAST_ 0
+#define ENABLE_MULTICAST_ 1
 #define ENABLE_MULTICAST ENABLE_MULTICAST_
 #define MULTICAST_TESTING_ 0
 #define MULTICAST_TESTING (ENABLE_MULTICAST == 1 ? MULTICAST_TESTING_ : 0)
@@ -417,16 +417,6 @@ extern uint64_t last_pushed_req[SESSIONS_PER_MACHINE];
 /////////////~~~~FUNCTIONS~~~~~~/////////////////////////
 //////////////////////////////////////////////////////
 
-typedef struct fifo {
-  void *fifo;
-  uint32_t push_ptr;
-  uint32_t pull_ptr;
-  uint32_t max_size; //in slots
-  uint32_t max_byte_size;
-  uint32_t capacity;
-  uint32_t net_capacity;
-  uint32_t *backwards_ptrs;
-} fifo_t;
 
 
 typedef enum {yellow, red, green, cyan, magenta, regular} color_t;

@@ -92,8 +92,10 @@ void mica_init(mica_kv_t *kvs, int instance_id,
   /* Alloc index and initialize all entries to invalid */
   // printf("mica: Allocting hash table index for instance %d\n", instance_id);
   int ht_index_key = MICA_INDEX_SHM_KEY + instance_id;
-  my_printf(green, "asking for %lu MB for the buckets \n",
-            num_bkts * sizeof(struct mica_bkt)/ (M_1));
+  if (ENABLE_ASSERTIONS) {
+    my_printf(green, "asking for %lu MB for the buckets \n",
+              num_bkts * sizeof(struct mica_bkt) / (M_1));
+  }
   kvs->ht_index = (struct mica_bkt *) hrd_malloc_socket(ht_index_key,
                                                        num_bkts * sizeof(struct mica_bkt), node_id);
 
@@ -106,7 +108,9 @@ void mica_init(mica_kv_t *kvs, int instance_id,
   /* Alloc log */
 //	printf("mica: Allocting hash table log for instance %d\n", instance_id);
   int ht_log_key = MICA_LOG_SHM_KEY + instance_id;
-  my_printf(green, "asking for %lu MB for the log  \n", num_bkts * sizeof(struct mica_bkt) / M_1);
+  if (ENABLE_ASSERTIONS) {
+    my_printf(green, "asking for %lu MB for the log  \n", num_bkts * sizeof(struct mica_bkt) / M_1);
+  }
   kvs->ht_log = (uint8_t *) hrd_malloc_socket(ht_log_key, log_cap, node_id);
 }
 

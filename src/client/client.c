@@ -32,7 +32,7 @@ static inline uint32_t send_reqs_from_trace(trace_t *trace, uint16_t t_id)
       uint16_t wrkr = w_i + first_worker;
       for (s_i = 0; s_i < SESSIONS_PER_THREAD; s_i++) {
         uint16_t pull_ptr = interface[wrkr].clt_pull_ptr[s_i];
-        //printf("Client %u  wrkr %u s_i %u, pull_ptr %u \n", t_id, wrkr, s_i, pull_ptr);
+        //printf("Client %u  wrkr %u s_i %u, w_pull_ptr %u \n", t_id, wrkr, s_i, w_pull_ptr);
         while (interface[wrkr].req_array[s_i][pull_ptr].state == COMPLETED_REQ) {
           // get the result
           polled = true;
@@ -48,7 +48,7 @@ static inline uint32_t send_reqs_from_trace(trace_t *trace, uint16_t t_id)
     else dbg_cntr = 0;
     if (dbg_cntr == BILLION) {
       printf("Failed to poll \n");
-      //interface[wrkr].clt_pull_ptr[s_i], (void *)&req_array[w_i][s_i][interface[wrkr].clt_pull_ptr[s_i]].state, req_array[w_i][s_i][pull_ptr[w_i][s_i]].state);
+      //interface[wrkr].clt_pull_ptr[s_i], (void *)&req_array[w_i][s_i][interface[wrkr].clt_pull_ptr[s_i]].state, req_array[w_i][s_i][w_pull_ptr[w_i][s_i]].state);
       dbg_cntr = 0;
     }
     // issue requests

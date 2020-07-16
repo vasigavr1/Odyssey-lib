@@ -280,7 +280,7 @@ static inline int access_async(uint32_t key_id, uint8_t *value_to_read,
   check_state_with_allowed_flags (2, cl_op->state, INVALID_REQ);
 
   //my_printf(green, "Sess %u Activating poll ptr %u for req %u at state %u \n",
-  //             s_i, push_ptr, cl_op->opcode, cl_op->state);
+  //             s_i, w_push_ptr, cl_op->opcode, cl_op->state);
   atomic_store_explicit(&cl_op->state, (uint8_t) ACTIVE_REQ, memory_order_release);
   MOD_INCR(interface[wrkr].clt_push_ptr[s_i], PER_SESSION_REQ_NUM);
   last_pushed_req[session_id]++;
