@@ -11,7 +11,7 @@
 #include "fifo.h"
 #include "generic_inline_util.h"
 
-
+typedef struct context context_t;
 
 typedef enum{
   SEND_CREDITS_LDR_RECV_NONE,
@@ -30,6 +30,13 @@ typedef enum{
   SEND_BCAST_RECV_UNI
 } flow_type_t;
 
+typedef enum {
+  RECV_NOTHING,
+  RECV_REPLY,
+  RECV_REQ,
+  RECV_SEC_ROUND
+} recv_type_t;
+
 
 typedef struct per_qp_meta {
   struct ibv_send_wr *send_wr;
@@ -45,6 +52,7 @@ typedef struct per_qp_meta {
   uint32_t send_q_depth;
   uint32_t recv_q_depth;
   flow_type_t flow_type;
+  recv_type_t recv_type;
 
   uint32_t receipient_num;
   uint32_t remote_senders_num;
@@ -52,6 +60,7 @@ typedef struct per_qp_meta {
 
   uint32_t ss_batch;
   uint16_t *credits;
+  bool needs_credits;
 
   fifo_t *recv_fifo;
   bool has_recv_fifo;
@@ -77,8 +86,18 @@ typedef struct per_qp_meta {
 
   uint64_t sent_tx; //how many messages have been sent
 
-  uint32_t completed_but_not_polled_writes;
+  uint32_t completed_but_not_polled;
   uint32_t outstanding_messages;
+  uint32_t dbg_counter;
+
+  fifo_t *mirror_remote_recv_fifo;
+
+  bool (*recv_handler)(context_t *, void *);
+  void (*send_helper)(context_t *, void *);
+  char *send_string;
+  char *recv_string;
+
+
 
 } per_qp_meta_t;
 
@@ -147,27 +166,33 @@ static void allocate_work_requests(per_qp_meta_t* qp_meta)
 }
 
 static void create_per_qp_meta(per_qp_meta_t* qp_meta,
-                                uint32_t send_wr_num,
-                                uint32_t recv_wr_num,
-                                flow_type_t flow_type,
+                               uint32_t send_wr_num,
+                               uint32_t recv_wr_num,
+                               flow_type_t flow_type,
+                               recv_type_t recv_type,
 
-                                uint32_t receipient_num,
-                                uint32_t remote_senders_num,
-                                uint32_t recv_fifo_slot_num,
+                               uint32_t receipient_num,
+                               uint32_t remote_senders_num,
+                               uint32_t recv_fifo_slot_num,
 
-                                uint32_t recv_size,
-                                uint32_t send_size,
+                               uint32_t recv_size,
+                               uint32_t send_size,
                                bool mcast_send,
                                bool mcast_recv,
-                                uint16_t mcast_qp_id,
-                                uint8_t leader_m_id,
-                                uint32_t send_fifo_slot_num,
-                                uint16_t credits,
-                               uint16_t mes_header)
+                               uint16_t mcast_qp_id,
+                               uint8_t leader_m_id,
+                               uint32_t send_fifo_slot_num,
+                               uint16_t credits,
+                               uint16_t mes_header,
+                               bool (*recv_handler) (context_t *, void *),
+                               void (*send_helper) (context_t *, void *),
+                               const char *send_string,
+                               const char *recv_string)
 {
   qp_meta->send_wr_num = send_wr_num;
   qp_meta->recv_wr_num = recv_wr_num;
   qp_meta->flow_type = flow_type;
+  qp_meta->recv_type = recv_type;
   qp_meta->receipient_num = receipient_num;
   qp_meta->remote_senders_num = remote_senders_num;
   qp_meta->pull_ptr = 0;
@@ -181,7 +206,21 @@ static void create_per_qp_meta(per_qp_meta_t* qp_meta,
   qp_meta->mcast_send = mcast_send;
   qp_meta->mcast_recv = mcast_recv;
   qp_meta->mcast_qp_id = mcast_qp_id;
-  qp_meta->completed_but_not_polled_writes = 0;
+  qp_meta->completed_but_not_polled = 0;
+  qp_meta->recv_handler = recv_handler;
+  qp_meta->send_helper = send_helper;
+
+  if (send_string != NULL) {
+    qp_meta->send_string = malloc(strlen(send_string) + 1);
+    strcpy(qp_meta->send_string, send_string);
+  }
+
+  if (recv_string != NULL) {
+    qp_meta->recv_string = malloc(strlen(recv_string) + 1);
+    strcpy(qp_meta->recv_string, recv_string);
+  }
+
+
 
 
   switch (qp_meta->flow_type){
@@ -208,6 +247,7 @@ static void create_per_qp_meta(per_qp_meta_t* qp_meta,
 
 
   if (credits > 0) {
+    qp_meta->needs_credits = true;
     int credit_rows =
       receipient_num == 1 ? 1 : MACHINE_NUM;
     qp_meta->credits = malloc(credit_rows * sizeof(uint16_t));
@@ -530,7 +570,16 @@ static void init_rdma_ctx(context_t *ctx, hrd_ctrl_blk_t *cb)
   }
 }
 
-
+static void ctx_prepost_recvs(context_t *ctx)
+{
+  for (int qp_i = 0; qp_i < ctx->qp_num; ++qp_i) {
+    per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_i];
+    if (qp_meta->recv_type == RECV_REQ || qp_meta->recv_type == RECV_SEC_ROUND) {
+      post_recvs_with_recv_info(qp_meta->recv_info,
+                                qp_meta->recv_wr_num);
+    }
+  }
+}
 
 static void set_up_ctx(context_t *ctx)
 {
@@ -557,6 +606,7 @@ static void set_up_ctx(context_t *ctx)
   set_up_ctx_mcast(ctx);
   set_up_ctx_qps(ctx);
   init_ctx_recv_infos(ctx);
+  ctx_prepost_recvs(ctx);
   check_ctx(ctx);
 }
 

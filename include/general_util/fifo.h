@@ -13,6 +13,7 @@ typedef struct per_fifo_slot_meta {
   uint32_t byte_size;
   uint32_t resp_size;
   uint32_t backward_ptr; // ptr to a different fifo
+  uint8_t rm_id; // machine to send this message, if unicast
 } slot_meta_t;
 
 typedef struct fifo {
@@ -61,7 +62,7 @@ static inline fifo_t *fifo_constructor(uint32_t max_size,
                                        bool alloc_slot_meta,
                                        uint16_t mes_header)
 {
-  fifo_t * fifo = calloc(1, (sizeof(fifo_t)));
+  fifo_t *fifo = calloc(1, (sizeof(fifo_t)));
   fifo->max_size = max_size;
   fifo->slot_size = slot_size;
   fifo->max_byte_size = max_size * slot_size;
@@ -235,17 +236,27 @@ static inline void reset_fifo_slot(fifo_t *send_fifo)
 static inline void* get_send_fifo_ptr(fifo_t* send_fifo,
                                       uint32_t new_size,
                                       uint32_t resp_size,
+                                      bool create_new_mes,
                                       uint16_t t_id)
 {
+  check_fifo(send_fifo);
   slot_meta_t *slot_meta = get_fifo_slot_meta_push(send_fifo);
   slot_meta->resp_size += resp_size;
 
 
-  bool new_message_because_of_r_rep = slot_meta->resp_size > MTU;
-  bool new_message = (slot_meta->byte_size + new_size) > send_fifo->slot_size ||
-                     new_message_because_of_r_rep;
+  bool new_message_because_of_rep = slot_meta->resp_size > MTU;
+  bool new_message_because_of_size = (slot_meta->byte_size + new_size) > send_fifo->slot_size;
 
+
+  bool is_empty = slot_meta->coalesce_num == 0;
+  bool new_message = new_message_because_of_rep ||
+                     new_message_because_of_size ||
+                    (create_new_mes && !is_empty);
+
+  //printf("new_message %d, slot size %u, is_empty %d, input_new_mes %d \n",
+  //       new_message, send_fifo->slot_size, is_empty, create_new_mes);
   if (new_message) {
+    if (ENABLE_ASSERTIONS) assert(!is_empty);
     reset_fifo_slot(send_fifo);
     slot_meta = get_fifo_slot_meta_push(send_fifo);
   }
@@ -257,6 +268,7 @@ static inline void* get_send_fifo_ptr(fifo_t* send_fifo,
     assert(slot_meta->byte_size <= send_fifo->slot_size);
     assert(slot_meta->byte_size <= MTU);
   }
+  check_fifo(send_fifo);
   return get_fifo_push_slot_with_offset(send_fifo, inside_r_ptr);
 }
 
