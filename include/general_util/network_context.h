@@ -37,6 +37,13 @@ typedef enum {
   RECV_SEC_ROUND
 } recv_type_t;
 
+typedef struct qp_meta_mfs {
+  bool (*recv_handler)(context_t *);
+  void (*send_helper)(context_t *);
+  void (*recv_kvs)(context_t *);
+
+} mf_t;
+
 
 typedef struct per_qp_meta {
   struct ibv_send_wr *send_wr;
@@ -59,9 +66,13 @@ typedef struct per_qp_meta {
   uint8_t leader_m_id; // if there exist
 
   uint32_t ss_batch;
+
+  // flow control
   uint16_t *credits;
   bool needs_credits;
+  fifo_t *mirror_remote_recv_fifo;
 
+  // send-recv fifos
   fifo_t *recv_fifo;
   bool has_recv_fifo;
   fifo_t *send_fifo;
@@ -87,17 +98,16 @@ typedef struct per_qp_meta {
   uint64_t sent_tx; //how many messages have been sent
 
   uint32_t completed_but_not_polled;
+
+  // debug info
   uint32_t outstanding_messages;
-  uint32_t dbg_counter;
+  uint32_t wait_for_reps_ctr;
 
-  fifo_t *mirror_remote_recv_fifo;
+  uint32_t time_out_cnt;
 
-  bool (*recv_handler)(context_t *, void *);
-  void (*send_helper)(context_t *, void *);
   char *send_string;
   char *recv_string;
-
-
+  mf_t *mfs;
 
 } per_qp_meta_t;
 
@@ -120,6 +130,7 @@ typedef struct context {
   void *recv_buffer;
   rdma_context_t *rdma_ctx;
   char* local_ip;
+  void* appl_ctx;
 
 } context_t;
 
@@ -184,8 +195,6 @@ static void create_per_qp_meta(per_qp_meta_t* qp_meta,
                                uint32_t send_fifo_slot_num,
                                uint16_t credits,
                                uint16_t mes_header,
-                               bool (*recv_handler) (context_t *, void *),
-                               void (*send_helper) (context_t *, void *),
                                const char *send_string,
                                const char *recv_string)
 {
@@ -207,8 +216,9 @@ static void create_per_qp_meta(per_qp_meta_t* qp_meta,
   qp_meta->mcast_recv = mcast_recv;
   qp_meta->mcast_qp_id = mcast_qp_id;
   qp_meta->completed_but_not_polled = 0;
-  qp_meta->recv_handler = recv_handler;
-  qp_meta->send_helper = send_helper;
+
+
+
 
   if (send_string != NULL) {
     qp_meta->send_string = malloc(strlen(send_string) + 1);
@@ -579,6 +589,17 @@ static void ctx_prepost_recvs(context_t *ctx)
                                 qp_meta->recv_wr_num);
     }
   }
+}
+
+static void ctx_qp_meta_mfs(per_qp_meta_t *qp_meta,
+                            bool (*recv_handler) (context_t *),
+                            void (*send_helper) (context_t *),
+                            void(*recv_kvs) (context_t *))
+{
+  qp_meta->mfs = malloc(sizeof(mf_t));
+  qp_meta->mfs->recv_handler = recv_handler;
+  qp_meta->mfs->send_helper = send_helper;
+  qp_meta->mfs->recv_kvs = recv_kvs;
 }
 
 static void set_up_ctx(context_t *ctx)
