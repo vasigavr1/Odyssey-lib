@@ -186,7 +186,7 @@ static void set_up_qp_attr_server(int qp_num)
 
 
 // Used by all kinds of threads to publish their QPs
-static void fill_qps(int t_id, hrd_ctrl_blk_t *cb)
+static void fill_qps(uint16_t t_id, hrd_ctrl_blk_t *cb)
 {
   uint32_t qp_i;
   for (qp_i = 0; qp_i < cb->num_dgram_qps; qp_i++) {
@@ -207,10 +207,9 @@ static void fill_qps(int t_id, hrd_ctrl_blk_t *cb)
 }
 
 // All workers both use this to establish connections
-static void setup_connections(uint32_t g_id,
+static void setup_connections(uint16_t t_id,
                               hrd_ctrl_blk_t *cb)
 {
-  int t_id = g_id % WORKERS_PER_MACHINE;
   fill_qps(t_id, cb);
 
   if (t_id == 0) {
@@ -218,16 +217,7 @@ static void setup_connections(uint32_t g_id,
     if (machine_id == 0) set_up_qp_attr_server(cb->num_dgram_qps);
     else set_up_qp_attr_client(cb->num_dgram_qps);
     get_qps_from_all_other_machines(cb);
-//    assert(!qps_are_set_up);
-    // Spawn a thread that prints the stats
-
-//    atomic_store_explicit(&qps_are_set_up, true, memory_order_release);
   }
-//  else {
-//    while (!atomic_load_explicit(&qps_are_set_up, memory_order_acquire));  usleep(200000);
-//  }
-//  assert(qps_are_set_up);
-//    printf("Thread %d has all the needed ahs\n", g_id );
 }
 
 static void thread_zero_spawns_stat_thread(uint16_t t_id)
@@ -240,17 +230,12 @@ static void thread_zero_spawns_stat_thread(uint16_t t_id)
   }
 }
 
-static void wait_for_thread_zero()
-{
-
-}
 
 
-static void setup_connections_and_spawn_stats_thread(uint32_t g_id,
-                                                     hrd_ctrl_blk_t *cb,
+static void setup_connections_and_spawn_stats_thread(hrd_ctrl_blk_t *cb,
                                                      uint16_t t_id)
 {
-  setup_connections(g_id, cb);
+  setup_connections(t_id, cb);
   thread_zero_spawns_stat_thread(t_id);
 
   if (t_id == 0) atomic_store_explicit(&qps_are_set_up, true, memory_order_release);

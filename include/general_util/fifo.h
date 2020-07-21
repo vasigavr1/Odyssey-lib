@@ -60,20 +60,34 @@ static inline void check_slot_and_slot_meta(fifo_t *fifo, uint32_t slot_no)
 static inline fifo_t *fifo_constructor(uint32_t max_size,
                                        uint32_t slot_size,
                                        bool alloc_slot_meta,
-                                       uint16_t mes_header)
+                                       uint16_t mes_header,
+                                       uint32_t fifo_num)
 {
-  fifo_t *fifo = calloc(1, (sizeof(fifo_t)));
-  fifo->max_size = max_size;
-  fifo->slot_size = slot_size;
-  fifo->max_byte_size = max_size * slot_size;
-  fifo->fifo = calloc(fifo->max_byte_size, sizeof(uint8_t));
+  fifo_t *fifo = calloc(fifo_num, (sizeof(fifo_t)));
+  for (int fifo_i = 0; fifo_i < fifo_num; ++fifo_i) {
+    fifo[fifo_i].max_size = max_size;
+    fifo[fifo_i].slot_size = slot_size;
+    fifo[fifo_i].max_byte_size = max_size * slot_size;
+    fifo[fifo_i].fifo = calloc(fifo[fifo_i].max_byte_size, sizeof(uint8_t));
 
-  if (alloc_slot_meta) {
-    fifo->slot_meta = calloc(max_size, sizeof(slot_meta_t));
-    fifo->slot_meta[0].byte_size = mes_header;
+    if (alloc_slot_meta) {
+      fifo[fifo_i].slot_meta = calloc(max_size, sizeof(slot_meta_t));
+      fifo[fifo_i].slot_meta[0].byte_size = mes_header;
+    }
+    fifo[fifo_i].mes_header = mes_header;
+    check_fifo(&fifo[fifo_i]);
   }
-  fifo->mes_header = mes_header;
-  check_fifo(fifo);
+  //fifo->max_size = max_size;
+  //fifo->slot_size = slot_size;
+  //fifo->max_byte_size = max_size * slot_size;
+  //fifo->fifo = calloc(fifo->max_byte_size, sizeof(uint8_t));
+  //
+  //if (alloc_slot_meta) {
+  //  fifo->slot_meta = calloc(max_size, sizeof(slot_meta_t));
+  //  fifo->slot_meta[0].byte_size = mes_header;
+  //}
+  //fifo->mes_header = mes_header;
+  //check_fifo(fifo);
   return fifo;
 }
 
@@ -272,6 +286,17 @@ static inline void* get_send_fifo_ptr(fifo_t* send_fifo,
   return get_fifo_push_slot_with_offset(send_fifo, inside_r_ptr);
 }
 
+
+//
+static inline void fifo_send_from_pull_slot(fifo_t* send_fifo)
+{
+  uint16_t coalesce_num = get_fifo_slot_meta_pull(send_fifo)->coalesce_num;
+  send_fifo->net_capacity -= coalesce_num;
+  if (send_fifo->net_capacity == 0)
+    reset_fifo_slot(send_fifo);
+  fifo_decr_capacity(send_fifo);
+  fifo_incr_pull_ptr(send_fifo);
+}
 
 
 /*------------------------------------------------------

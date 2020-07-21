@@ -41,6 +41,7 @@ typedef struct qp_meta_mfs {
   bool (*recv_handler)(context_t *);
   void (*send_helper)(context_t *);
   void (*recv_kvs)(context_t *);
+  void (*insert_helper) (context_t *, void*, void *, uint32_t);
 
 } mf_t;
 
@@ -277,7 +278,8 @@ static void create_per_qp_meta(per_qp_meta_t* qp_meta,
 
   if (send_fifo_slot_num > 0) {
     qp_meta->has_send_fifo = true;
-    qp_meta->send_fifo = fifo_constructor(send_fifo_slot_num, send_size, true, mes_header);
+    qp_meta->send_fifo = fifo_constructor(send_fifo_slot_num,
+                                          send_size, true, mes_header, 1);
   }
   else qp_meta->has_send_fifo = false;
 
@@ -594,13 +596,25 @@ static void ctx_prepost_recvs(context_t *ctx)
 static void ctx_qp_meta_mfs(per_qp_meta_t *qp_meta,
                             bool (*recv_handler) (context_t *),
                             void (*send_helper) (context_t *),
-                            void(*recv_kvs) (context_t *))
+                            void(*recv_kvs) (context_t *),
+                            void (*insert_helper) (context_t *, void*, void *, uint32_t))
 {
   qp_meta->mfs = malloc(sizeof(mf_t));
   qp_meta->mfs->recv_handler = recv_handler;
   qp_meta->mfs->send_helper = send_helper;
   qp_meta->mfs->recv_kvs = recv_kvs;
+  qp_meta->mfs->insert_helper = insert_helper;
+
 }
+
+static void ctx_qp_meta_mirror_buffers(per_qp_meta_t *qp_meta,
+                                       uint32_t max_size,
+                                       uint16_t fifo_num)
+{
+  qp_meta->mirror_remote_recv_fifo =
+    fifo_constructor(max_size, sizeof(uint16_t), false, 0, fifo_num);
+}
+
 
 static void set_up_ctx(context_t *ctx)
 {
