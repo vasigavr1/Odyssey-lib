@@ -99,8 +99,8 @@ static inline fifo_t *fifo_constructor(uint32_t max_size,
   return fifo;
 }
 
-/// FIFO SLOT
-static inline void* get_fifo_slot(fifo_t *fifo, uint32_t slot, uint32_t offset)
+/// FIFO SLOT-- this is private
+static inline void* get_fifo_slot_private(fifo_t *fifo, uint32_t slot, uint32_t offset)
 {
   check_fifo(fifo);
   if (ENABLE_ASSERTIONS) {
@@ -113,40 +113,45 @@ static inline void* get_fifo_slot(fifo_t *fifo, uint32_t slot, uint32_t offset)
 
 static inline void* get_fifo_push_slot(fifo_t *fifo)
 {
-  return get_fifo_slot(fifo, fifo->push_ptr, 0);
+  return get_fifo_slot_private(fifo, fifo->push_ptr, 0);
 }
 
 static inline void* get_fifo_pull_slot(fifo_t *fifo)
 {
-  return get_fifo_slot(fifo, fifo->pull_ptr, 0);
+  return get_fifo_slot_private(fifo, fifo->pull_ptr, 0);
 }
 
-static inline void* get_fifo_specific_slot(fifo_t *fifo, uint32_t slot_no)
+static inline void* get_fifo_slot(fifo_t *fifo, uint32_t slot_no)
 {
-  return get_fifo_slot(fifo, slot_no, 0);
+  return get_fifo_slot_private(fifo, slot_no, 0);
+}
+
+static inline void* get_fifo_slot_mod(fifo_t *fifo, uint32_t slot_no)
+{
+  return get_fifo_slot_private(fifo, slot_no % fifo->max_size, 0);
 }
 
 
 static inline void* get_fifo_push_slot_with_offset(fifo_t *fifo, uint32_t offset)
 {
-  return get_fifo_slot(fifo, fifo->push_ptr, offset);
+  return get_fifo_slot_private(fifo, fifo->push_ptr, offset);
 }
 
 static inline void* get_fifo_pull_slot_with_offset(fifo_t *fifo, uint32_t offset)
 {
-  return get_fifo_slot(fifo, fifo->pull_ptr, offset);
+  return get_fifo_slot_private(fifo, fifo->pull_ptr, offset);
 }
 
 static inline void* get_fifo_specific_slot_with_offset(fifo_t *fifo, uint32_t slot_no,
                                                        uint32_t offset)
 {
-  return get_fifo_slot(fifo, slot_no, offset);
+  return get_fifo_slot_private(fifo, slot_no, offset);
 }
 
 static inline void* get_fifo_prev_slot(fifo_t *fifo, uint32_t slot_no)
 {
   slot_no = mod_decr(slot_no, fifo->max_size);
-  return get_fifo_slot(fifo, slot_no, 0);
+  return get_fifo_slot_private(fifo, slot_no, 0);
 }
 
 static inline void* get_fifo_pull_prev_slot(fifo_t *fifo)
@@ -244,10 +249,18 @@ static inline void fifo_incr_capacity(fifo_t *fifo)
   check_fifo(fifo);
 }
 
-static inline void fifo_decr_capacity(fifo_t *fifo)
+static inline void fifo_decrem_capacity(fifo_t *fifo)
 {
   check_fifo(fifo);
   fifo->capacity--;
+  check_fifo(fifo);
+}
+
+static inline void fifo_decrease_capacity(fifo_t *fifo, uint32_t reduce_num)
+{
+  check_fifo(fifo);
+  if (ENABLE_ASSERTIONS) assert(fifo->capacity >= reduce_num);
+  fifo->capacity -= reduce_num;
   check_fifo(fifo);
 }
 
@@ -321,7 +334,7 @@ static inline void fifo_send_from_pull_slot(fifo_t* send_fifo)
   send_fifo->net_capacity -= coalesce_num;
   if (send_fifo->net_capacity == 0)
     reset_fifo_slot(send_fifo);
-  fifo_decr_capacity(send_fifo);
+  fifo_decrem_capacity(send_fifo);
   fifo_incr_pull_ptr(send_fifo);
 }
 
