@@ -30,7 +30,15 @@ typedef struct fifo {
   uint16_t mes_header;
 } fifo_t;
 
+static inline uint32_t mod_decr(uint32_t x, uint32_t N)
+{
+  return ((N + x - 1) % N);
+}
 
+static inline uint32_t mod_incr(uint32_t x, uint32_t N)
+{
+  return ((x + 1) % N);
+}
 /*---------------------------------------------------------------------
  * -----------------------FIFO Handles------------------------------
  * ---------------------------------------------------------------------*/
@@ -135,18 +143,37 @@ static inline void* get_fifo_specific_slot_with_offset(fifo_t *fifo, uint32_t sl
   return get_fifo_slot(fifo, slot_no, offset);
 }
 
+static inline void* get_fifo_prev_slot(fifo_t *fifo, uint32_t slot_no)
+{
+  slot_no = mod_decr(slot_no, fifo->max_size);
+  return get_fifo_slot(fifo, slot_no, 0);
+}
+
+static inline void* get_fifo_pull_prev_slot(fifo_t *fifo)
+{
+  return get_fifo_prev_slot(fifo, fifo->pull_ptr);
+}
+
+static inline void* get_fifo_push_prev_slot(fifo_t *fifo)
+{
+  return get_fifo_prev_slot(fifo, fifo->push_ptr);
+}
+
+
+
+
 /// INCREMENT PUSH PULL
 static inline void fifo_incr_push_ptr(fifo_t *fifo)
 {
   check_fifo(fifo);
-  MOD_INCR(fifo->push_ptr, fifo->max_size);
+  fifo->push_ptr = mod_incr(fifo->push_ptr, fifo->max_size);
   check_fifo(fifo);
 }
 
 static inline void fifo_incr_pull_ptr(fifo_t *fifo)
 {
   check_fifo(fifo);
-  MOD_INCR(fifo->pull_ptr, fifo->max_size);
+  fifo->pull_ptr = mod_incr(fifo->pull_ptr, fifo->max_size);
   check_fifo(fifo);
 }
 
@@ -309,6 +336,8 @@ static inline void fifo_send_from_pull_slot(fifo_t* send_fifo)
 /// In this case it is useful to mirror the buffer of remote machines,
 /// to infer their buffer availability
 
+
+
 // Generic function to mirror buffer spaces--used when elements are added
 static inline void add_to_the_mirrored_buffer(struct fifo *mirror_buf, uint8_t coalesce_num,
                                               uint16_t number_of_fifos,
@@ -319,7 +348,7 @@ static inline void add_to_the_mirrored_buffer(struct fifo *mirror_buf, uint8_t c
     uint32_t push_ptr = mirror_buf[i].push_ptr;
     uint16_t *fifo = (uint16_t *) mirror_buf[i].fifo;
     fifo[push_ptr] = (uint16_t) coalesce_num;
-    MOD_INCR(mirror_buf[i].push_ptr, max_size);
+    fifo_incr_push_ptr(&mirror_buf[i]);
     mirror_buf[i].capacity++;
     if (mirror_buf[i].capacity > max_size) {
       // this may noy be an error if there is a failure
@@ -334,21 +363,23 @@ static inline void add_to_the_mirrored_buffer(struct fifo *mirror_buf, uint8_t c
 static inline uint16_t remove_from_the_mirrored_buffer(struct fifo *mirror_buf_, uint16_t remove_num,
                                                        uint16_t t_id, uint8_t fifo_id, uint32_t max_size)
 {
-  struct fifo *mirror_buf = &mirror_buf_[fifo_id];
+  fifo_t *mirror_buf = &mirror_buf_[fifo_id];
   uint16_t *fifo = (uint16_t *) mirror_buf->fifo;
   uint16_t new_credits = 0;
   if (ENABLE_ASSERTIONS && mirror_buf->capacity == 0) {
-    my_printf(red, "remove_num %u, ,mirror_buf->w_pull_ptr %u fifo_id %u  \n",
-              remove_num, mirror_buf->pull_ptr, fifo_id);
+    my_printf(red, "REMOVING FROM MIRROR BUFF, WITH ZERO CAPACITY: "
+                "remove_num %u, mirror_buf->pull_ptr %u fifo_id %u, total size %u \n",
+              remove_num, mirror_buf->pull_ptr, fifo_id, mirror_buf->max_size);
     assert(false);
   }
   while (remove_num > 0) {
     uint32_t pull_ptr = mirror_buf->pull_ptr;
     if (fifo[pull_ptr] <= remove_num) {
       remove_num -= fifo[pull_ptr];
-      MOD_INCR(mirror_buf->pull_ptr, max_size);
+      fifo_incr_pull_ptr(mirror_buf);
       if (ENABLE_ASSERTIONS && mirror_buf->capacity == 0) {
-        my_printf(red, "remove_num %u, ,mirror_buf->w_pull_ptr %u fifo_id %u  \n",
+        my_printf(red, "REMOVING FROM MIRROR BUFF, WITH ZERO CAPACITY: "
+                    "remove_num %u, mirror_buf->pull_ptr %u fifo_id %u  \n",
                   remove_num, mirror_buf->pull_ptr, fifo_id);
         assert(false);
       }

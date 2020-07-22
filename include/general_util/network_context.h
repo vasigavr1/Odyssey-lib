@@ -586,10 +586,10 @@ static void ctx_prepost_recvs(context_t *ctx)
 {
   for (int qp_i = 0; qp_i < ctx->qp_num; ++qp_i) {
     per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_i];
-    if (qp_meta->recv_type == RECV_REQ || qp_meta->recv_type == RECV_SEC_ROUND) {
+    //if (qp_meta->recv_type == RECV_REQ || qp_meta->recv_type == RECV_SEC_ROUND) {
       post_recvs_with_recv_info(qp_meta->recv_info,
                                 qp_meta->recv_wr_num);
-    }
+    //}
   }
 }
 
