@@ -13,6 +13,11 @@
 
 typedef struct context context_t;
 
+typedef void (*insert_helper_t) (context_t *, void*, void *, uint32_t);
+typedef bool (*recv_handler_t)(context_t *);
+typedef void (*send_helper_t)(context_t *);
+typedef void (*recv_kvs_t)(context_t *);
+
 typedef enum{
   SEND_CREDITS_LDR_RECV_NONE,
   RECV_CREDITS,
@@ -28,6 +33,7 @@ typedef enum{
 
   SEND_UNI_REP_TO_BCAST,
   SEND_BCAST_RECV_UNI
+
 } flow_type_t;
 
 typedef enum {
@@ -35,14 +41,14 @@ typedef enum {
   RECV_REPLY,
   RECV_REQ,
   RECV_SEC_ROUND
+
 } recv_type_t;
 
 typedef struct qp_meta_mfs {
-  bool (*recv_handler)(context_t *);
-  void (*send_helper)(context_t *);
-  void (*recv_kvs)(context_t *);
-  void (*insert_helper) (context_t *, void*, void *, uint32_t);
-
+  recv_handler_t recv_handler;
+  send_helper_t send_helper;
+  recv_kvs_t recv_kvs;
+  insert_helper_t insert_helper;
 } mf_t;
 
 
@@ -586,18 +592,16 @@ static void ctx_prepost_recvs(context_t *ctx)
 {
   for (int qp_i = 0; qp_i < ctx->qp_num; ++qp_i) {
     per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_i];
-    //if (qp_meta->recv_type == RECV_REQ || qp_meta->recv_type == RECV_SEC_ROUND) {
-      post_recvs_with_recv_info(qp_meta->recv_info,
-                                qp_meta->recv_wr_num);
-    //}
+    post_recvs_with_recv_info(qp_meta->recv_info,
+                              qp_meta->recv_wr_num);
   }
 }
 
 static void ctx_qp_meta_mfs(per_qp_meta_t *qp_meta,
-                            bool (*recv_handler) (context_t *),
-                            void (*send_helper) (context_t *),
-                            void(*recv_kvs) (context_t *),
-                            void (*insert_helper) (context_t *, void*, void *, uint32_t))
+                            recv_handler_t recv_handler,
+                            send_helper_t send_helper,
+                            recv_kvs_t recv_kvs,
+                            insert_helper_t insert_helper)
 {
   qp_meta->mfs = malloc(sizeof(mf_t));
   qp_meta->mfs->recv_handler = recv_handler;
