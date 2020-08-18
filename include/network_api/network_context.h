@@ -7,6 +7,7 @@
 
 #include <multicast.h>
 #include <hrd.h>
+#include <rdma_gen_util.h>
 #include "top.h"
 #include "fifo.h"
 #include "generic_inline_util.h"
@@ -33,7 +34,10 @@ typedef enum{
   SEND_UNI_REP_RECV_LDR_BCAST,
 
   SEND_UNI_REP_TO_BCAST,
-  SEND_BCAST_RECV_UNI
+  SEND_BCAST_RECV_UNI,
+
+  SEND_BCAST_RECV_BCAST,
+  SEND_UNI_REP_RECV_UNI_REP
 
 } flow_type_t;
 
@@ -77,7 +81,7 @@ typedef struct per_qp_meta {
   uint32_t ss_batch;
 
   // flow control
-  uint16_t *credits;
+  uint16_t *credits; //[MACHINE_NUM]
   bool needs_credits;
   fifo_t *mirror_remote_recv_fifo;
 
@@ -163,12 +167,13 @@ static void check_ctx(context_t *ctx)
 static void allocate_work_requests(per_qp_meta_t* qp_meta)
 {
   qp_meta->send_wr = malloc(qp_meta->send_wr_num * sizeof(struct ibv_send_wr));
-  switch (qp_meta->flow_type){
+  switch (qp_meta->flow_type) {
     case SEND_CREDITS_LDR_RECV_NONE:
       qp_meta->send_sgl = malloc(sizeof(struct ibv_sge));
       break;
     case SEND_BCAST_LDR_RECV_UNI:
     case SEND_BCAST_RECV_UNI:
+    case SEND_BCAST_RECV_BCAST:
       qp_meta->send_sgl = malloc(MAX_BCAST_BATCH * sizeof(struct ibv_sge));
       break;
     case RECV_CREDITS:
@@ -178,9 +183,13 @@ static void allocate_work_requests(per_qp_meta_t* qp_meta)
     case SEND_UNI_REP_RECV_LDR_BCAST:
     case SEND_UNI_REP_TO_BCAST:
     case SEND_UNI_REP_LDR_RECV_UNI_REQ:
+    case SEND_UNI_REP_RECV_UNI_REQ:
+    case SEND_UNI_REP_RECV_UNI_REP:
       qp_meta->send_sgl = malloc(qp_meta->send_wr_num * sizeof(struct ibv_sge));
       break;
     default: assert(false);
+
+
   }
 
 
@@ -205,6 +214,7 @@ static void create_per_qp_meta(per_qp_meta_t* qp_meta,
                                uint32_t send_size,
                                bool mcast_send,
                                bool mcast_recv,
+
                                uint16_t mcast_qp_id,
                                uint8_t leader_m_id,
                                uint32_t send_fifo_slot_num,
@@ -247,6 +257,7 @@ static void create_per_qp_meta(per_qp_meta_t* qp_meta,
   switch (qp_meta->flow_type){
     case SEND_BCAST_LDR_RECV_UNI:
     case SEND_BCAST_RECV_UNI:
+    case SEND_BCAST_RECV_BCAST:
       qp_meta->ss_batch = (uint32_t) MAX((MIN_SS_BATCH / (receipient_num)), (MAX_BCAST_BATCH + 2));
       qp_meta->send_q_depth = ((qp_meta->ss_batch * receipient_num) + 10);
       break;
@@ -258,11 +269,14 @@ static void create_per_qp_meta(per_qp_meta_t* qp_meta,
     case SEND_UNI_REP_RECV_LDR_BCAST:
     case SEND_UNI_REP_TO_BCAST:
     case SEND_UNI_REP_RECV_UNI_REQ:
+    case SEND_UNI_REP_RECV_UNI_REP:
     case SEND_UNI_REP_LDR_RECV_UNI_REQ:
       qp_meta->ss_batch = (uint32_t) MAX(MIN_SS_BATCH, (send_wr_num + 2));
       qp_meta->send_q_depth = qp_meta->ss_batch + 3;
       break;
     default: assert(false);
+
+
   }
   qp_meta->recv_q_depth = recv_wr_num + 3;
 
@@ -431,6 +445,7 @@ static void init_ctx_send_wrs(context_t *ctx)
     switch (qp_meta->flow_type){
       case SEND_BCAST_LDR_RECV_UNI:
       case SEND_BCAST_RECV_UNI:
+      case SEND_BCAST_RECV_BCAST:
         for (uint16_t br_i = 0; br_i < MAX_BCAST_BATCH; br_i++) {
           for (uint16_t i = 0; i < MESSAGES_IN_BCAST; i++) {
             uint16_t rm_id = (uint16_t) (i < ctx->m_id ? i : i + 1);
@@ -451,13 +466,23 @@ static void init_ctx_send_wrs(context_t *ctx)
       case SEND_UNI_REQ_RECV_LDR_REP:
       case SEND_UNI_REP_RECV_LDR_BCAST:
       case SEND_UNI_REP_TO_BCAST:
-      case SEND_UNI_REP_LDR_RECV_UNI_REQ:
+      case SEND_UNI_REP_LDR_RECV_UNI_REQ: // Send always to leader
         for (uint16_t wr_i = 0; wr_i < qp_meta->send_wr_num; ++wr_i) {
           const_set_up_wr(ctx, qp_i, wr_i, wr_i, wr_i == qp_meta->send_wr_num - 1,
                           qp_meta->leader_m_id);
         }
         break;
+      case SEND_UNI_REP_RECV_UNI_REQ:
+      case SEND_UNI_REP_RECV_UNI_REP:
+        for (uint16_t wr_i = 0; wr_i < qp_meta->send_wr_num; ++wr_i) {
+          uint16_t rm_id = wr_i % qp_meta->receipient_num;
+          rm_id = (uint16_t) (rm_id < ctx->m_id ? rm_id : rm_id + 1);
+          const_set_up_wr(ctx, qp_i, wr_i, wr_i, wr_i == qp_meta->send_wr_num - 1,
+                          rm_id);
+        }
+        break;
       default: assert(false);
+
     }
   }
 }
@@ -480,7 +505,7 @@ static void set_per_qp_meta_recv_fifos(context_t *ctx)
         prev_qp_meta->recv_fifo->max_byte_size;
     }
     if (ENABLE_ASSERTIONS) {
-      printf("Recv fifo for qp %u starts at %p ends at %p, total w_size %u, slot number %u \n",
+      printf("Recv fifo for qp %u starts at %p ends at %p, total size %u, slot number %u \n",
              qp_i, qp_meta->recv_fifo->fifo, qp_meta->recv_fifo->fifo + qp_meta->recv_fifo->max_byte_size,
              qp_meta->recv_fifo->max_byte_size, qp_meta->recv_buf_slot_num);
     }
@@ -546,6 +571,7 @@ static void set_up_ctx_mcast(context_t *ctx)
           break;
         case SEND_BCAST_RECV_UNI:
         case SEND_UNI_REP_TO_BCAST:
+        case SEND_BCAST_RECV_BCAST:
           groups_per_flow[flow_i] = MACHINE_NUM;
           if (qp_meta->mcast_send)
             group_to_send_to[flow_i] = ctx->m_id;
@@ -555,6 +581,8 @@ static void set_up_ctx_mcast(context_t *ctx)
         case SEND_UNI_REQ_RECV_REP:
         case SEND_UNI_REQ_RECV_LDR_REP:
         case SEND_UNI_REP_LDR_RECV_UNI_REQ:
+        case SEND_UNI_REP_RECV_UNI_REQ:
+        case SEND_UNI_REP_RECV_UNI_REP:
           assert(false);
         default: assert(false);
       }
@@ -597,6 +625,8 @@ static void ctx_prepost_recvs(context_t *ctx)
 {
   for (int qp_i = 0; qp_i < ctx->qp_num; ++qp_i) {
     per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_i];
+    my_printf(yellow, "Wrkr %u QP %u: %s preposts %u recvs\n",
+              ctx->t_id, qp_i, qp_meta->recv_string, qp_meta->recv_wr_num);
     post_recvs_with_recv_info(qp_meta->recv_info,
                               qp_meta->recv_wr_num);
   }
@@ -622,7 +652,8 @@ static void ctx_set_up_q_info(context_t *ctx)
     per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_i];
 
     is_broadcast[qp_i] = qp_meta->flow_type == SEND_BCAST_LDR_RECV_UNI ||
-                         qp_meta->flow_type == SEND_BCAST_RECV_UNI;
+                         qp_meta->flow_type == SEND_BCAST_RECV_UNI ||
+                         qp_meta->flow_type == SEND_BCAST_RECV_BCAST;
     if (is_broadcast[qp_i]) {
       q_info->num_of_send_wrs++;
       q_info->num_of_credit_targets++;

@@ -171,8 +171,7 @@ static inline void ctx_send_unicasts(context_t *ctx,
 }
 
 
-static inline void ctx_poll_incoming_messages(context_t *ctx,
-                                          uint16_t qp_id)
+static inline void ctx_poll_incoming_messages(context_t *ctx, uint16_t qp_id)
 {
   per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_id];
   fifo_t *recv_fifo = qp_meta->recv_fifo;
