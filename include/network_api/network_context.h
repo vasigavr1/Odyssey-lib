@@ -17,6 +17,7 @@ typedef void (*insert_helper_t) (context_t *, void*, void *, uint32_t);
 typedef bool (*recv_handler_t)(context_t *);
 typedef void (*send_helper_t)(context_t *);
 typedef void (*recv_kvs_t)(context_t *);
+typedef void (*polling_debug_t)(context_t *, uint16_t, int);
 
 typedef enum{
   SEND_CREDITS_LDR_RECV_NONE,
@@ -49,6 +50,7 @@ typedef struct qp_meta_mfs {
   send_helper_t send_helper;
   recv_kvs_t recv_kvs;
   insert_helper_t insert_helper;
+  polling_debug_t polling_debug;
 } mf_t;
 
 
@@ -105,6 +107,7 @@ typedef struct per_qp_meta {
   uint64_t sent_tx; //how many messages have been sent
 
   uint32_t completed_but_not_polled;
+  uint32_t polled_messages;
 
   // debug info
   uint32_t outstanding_messages;
@@ -127,9 +130,12 @@ typedef struct rdma_context {
 
 typedef struct context {
   hrd_ctrl_blk_t *cb;
-
   mcast_cb_t *mcast_cb;
   per_qp_meta_t *qp_meta;
+  quorum_info_t *q_info;
+
+  all_qp_attr_t *all_qp_attr;
+
   uint16_t qp_num;
   uint8_t m_id;
   uint16_t t_id;
@@ -149,6 +155,8 @@ static void check_ctx(context_t *ctx)
     assert(qp_meta->send_qp != NULL);
     assert(qp_meta->recv_qp != NULL);
   }
+
+  if (ENABLE_ASSERTIONS) my_printf(green, "CTX checked \n");
 
 }
 
@@ -225,8 +233,6 @@ static void create_per_qp_meta(per_qp_meta_t* qp_meta,
   qp_meta->completed_but_not_polled = 0;
 
 
-
-
   if (send_string != NULL) {
     qp_meta->send_string = malloc(strlen(send_string) + 1);
     strcpy(qp_meta->send_string, send_string);
@@ -236,8 +242,6 @@ static void create_per_qp_meta(per_qp_meta_t* qp_meta,
     qp_meta->recv_string = malloc(strlen(recv_string) + 1);
     strcpy(qp_meta->recv_string, recv_string);
   }
-
-
 
 
   switch (qp_meta->flow_type){
@@ -589,6 +593,7 @@ static void init_rdma_ctx(context_t *ctx, hrd_ctrl_blk_t *cb)
 }
 
 static void ctx_prepost_recvs(context_t *ctx)
+
 {
   for (int qp_i = 0; qp_i < ctx->qp_num; ++qp_i) {
     per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_i];
@@ -597,17 +602,60 @@ static void ctx_prepost_recvs(context_t *ctx)
   }
 }
 
-static void ctx_qp_meta_mfs(per_qp_meta_t *qp_meta,
-                            recv_handler_t recv_handler,
-                            send_helper_t send_helper,
-                            recv_kvs_t recv_kvs,
-                            insert_helper_t insert_helper)
+
+static void ctx_set_up_q_info(context_t *ctx)
 {
-  qp_meta->mfs = malloc(sizeof(mf_t));
-  qp_meta->mfs->recv_handler = recv_handler;
-  qp_meta->mfs->send_helper = send_helper;
-  qp_meta->mfs->recv_kvs = recv_kvs;
-  qp_meta->mfs->insert_helper = insert_helper;
+  ctx->q_info = (quorum_info_t *) calloc(1, sizeof(quorum_info_t));
+  quorum_info_t *q_info = ctx->q_info;
+
+  q_info->active_num = REM_MACH_NUM;
+  q_info->first_active_rm_id = 0;
+  q_info->last_active_rm_id = REM_MACH_NUM - 1;
+  for (uint8_t i = 0; i < REM_MACH_NUM; i++) {
+    uint8_t m_id = i < machine_id ? i : (uint8_t) (i + 1);
+    q_info->active_ids[i] = m_id;
+    q_info->send_vector[i] = true;
+  }
+
+  bool *is_broadcast = calloc(ctx->qp_num, sizeof(bool));
+  for (int qp_i = 0; qp_i < ctx->qp_num; ++qp_i) {
+    per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_i];
+
+    is_broadcast[qp_i] = qp_meta->flow_type == SEND_BCAST_LDR_RECV_UNI ||
+                         qp_meta->flow_type == SEND_BCAST_RECV_UNI;
+    if (is_broadcast[qp_i]) {
+      q_info->num_of_send_wrs++;
+      q_info->num_of_credit_targets++;
+    }
+  }
+
+  if (q_info->num_of_send_wrs == 0) return;
+
+  q_info->send_wrs_ptrs = (struct ibv_send_wr **)
+    malloc(q_info->num_of_send_wrs * sizeof(struct ibv_send_wr *));
+  q_info->credit_ptrs = malloc (q_info->num_of_credit_targets * sizeof(uint16_t*));
+  q_info->targets = malloc (q_info->num_of_credit_targets * sizeof(uint16_t));
+
+  int b_i = 0;
+  for (int qp_i = 0; qp_i < ctx->qp_num; ++qp_i) {
+    per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_i];
+    if (is_broadcast[qp_i]) {
+      q_info->send_wrs_ptrs[b_i] = qp_meta->send_wr;
+      q_info->credit_ptrs[b_i] = qp_meta->credits;
+      q_info->targets[b_i] =  *qp_meta->credits; // Assuming this is the MAX credits
+      b_i++;
+    }
+  }
+}
+
+static void ctx_set_qp_meta_mfs(context_t *ctx,
+                                mf_t *mf)
+{
+  for (int qp_i = 0; qp_i < ctx->qp_num; ++qp_i) {
+    per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_i];
+    qp_meta->mfs = malloc(sizeof(mf_t));
+    memcpy(qp_meta->mfs, &mf[qp_i], sizeof(mf_t));
+  }
 
 }
 
@@ -639,6 +687,8 @@ static void set_up_ctx(context_t *ctx)
 
   ctx->cb = cb;
   ctx->recv_buffer = (void*) cb->dgram_buf;
+
+
   init_rdma_ctx(ctx, cb);
   init_ctx_send_mrs(ctx);
   set_per_qp_meta_recv_fifos(ctx);
@@ -646,6 +696,8 @@ static void set_up_ctx(context_t *ctx)
   set_up_ctx_qps(ctx);
   init_ctx_recv_infos(ctx);
   ctx_prepost_recvs(ctx);
+  ctx_set_up_q_info(ctx);
+
   check_ctx(ctx);
 }
 
@@ -661,5 +713,8 @@ static context_t *create_ctx(uint8_t m_id, uint16_t t_id,
   strcpy(ctx->local_ip, local_ip);
   return ctx;
 }
+
+
+
 
 #endif //ODYSSEY_NETWORK_CONTEXT_H

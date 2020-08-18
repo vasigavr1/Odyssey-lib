@@ -11,7 +11,7 @@
 #include "rdma_gen_util.h"
 #include "generic_inline_util.h"
 #include "config_util.h"
-#include "network_context.h"
+#include "../network_api/netw_func.h"
 #include "fifo.h"
 #include "../multicast/multicast.h"
 
