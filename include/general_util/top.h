@@ -85,10 +85,10 @@ typedef struct key mica_key_t;
 #define KVS_SOCKET 0// (WORKERS_PER_MACHINE < 30 ? 0 : 1 )// socket where the cache is bind
 
 // CORE CONFIGURATION
-#define WORKERS_PER_MACHINE 1
+#define WORKERS_PER_MACHINE 20
 #define MACHINE_NUM 5
-#define SESSIONS_PER_THREAD 1
-#define ENABLE_CLIENTS 0
+#define SESSIONS_PER_THREAD 40
+#define ENABLE_CLIENTS 1
 #define CLIENTS_PER_MACHINE_ 5
 #define CLIENTS_PER_MACHINE (ENABLE_CLIENTS ? CLIENTS_PER_MACHINE_ : 0)
 #define ENABLE_LOCK_FREE_READING 1
@@ -120,11 +120,11 @@ typedef struct key mica_key_t;
 //-------------------------------------------
 /* ----------TRACE------------------------ */
 //-------------------------------------------
-#define WRITE_RATIO 000 //Warning write ratio is given out of a 1000, e.g 10 means 10/1000 i.e. 1%
-#define SC_RATIO 1000// this is out of 1000, e.g. 10 means 1%
+#define WRITE_RATIO 500 //Warning write ratio is given out of a 1000, e.g 10 means 10/1000 i.e. 1%
+#define SC_RATIO 500// this is out of 1000, e.g. 10 means 1%
 #define ENABLE_RELEASES (1 && COMPILED_SYSTEM == kite_sys)
 #define ENABLE_ACQUIRES (1 && COMPILED_SYSTEM == kite_sys)
-#define RMW_RATIO 0000// this is out of 1000, e.g. 10 means 1%
+#define RMW_RATIO 500// this is out of 1000, e.g. 10 means 1%
 #define ENABLE_RMWS (1 && COMPILED_SYSTEM == kite_sys)
 #define FEED_FROM_TRACE 0 // used to enable skew++
 // RMW TRACE
@@ -165,8 +165,8 @@ typedef struct key mica_key_t;
 #define DEBUG_COMMITS 0
 #define DEBUG_WRITES 0
 #define DEBUG_ACKS 0
-#define DEBUG_READS 1
-#define DEBUG_READ_REPS 1
+#define DEBUG_READS 0
+#define DEBUG_READ_REPS 0
 #define DEBUG_TS 0
 #define CHECK_DBG_COUNTERS 0
 #define VERBOSE_DBG_COUNTER 0
@@ -210,7 +210,7 @@ enum {
   PRODUCER_CONSUMER
 };
 
-#define CLIENT_MODE CLIENT_USE_TRACE
+#define CLIENT_MODE TREIBER_ASYNC
 
 #define TREIBER_WRITES_NUM 1
 #define TREIBER_NO_CONFLICTS 0
@@ -245,7 +245,7 @@ enum {
 	-----------------MULTICAST-------------------------
 --------------------------------------------------*/
 // Multicast defines are not used, but are kept them for possible extension
-#define ENABLE_MULTICAST_ 0
+#define ENABLE_MULTICAST_ 1
 #define ENABLE_MULTICAST ENABLE_MULTICAST_
 #define MULTICAST_TESTING_ 0
 #define MULTICAST_TESTING (ENABLE_MULTICAST == 1 ? MULTICAST_TESTING_ : 0)

@@ -85,17 +85,6 @@ static inline fifo_t *fifo_constructor(uint32_t max_size,
     fifo[fifo_i].mes_header = mes_header;
     check_fifo(&fifo[fifo_i]);
   }
-  //fifo->max_size = max_size;
-  //fifo->slot_size = slot_size;
-  //fifo->max_byte_size = max_size * slot_size;
-  //fifo->fifo = calloc(fifo->max_byte_size, sizeof(uint8_t));
-  //
-  //if (alloc_slot_meta) {
-  //  fifo->slot_meta = calloc(max_size, sizeof(slot_meta_t));
-  //  fifo->slot_meta[0].byte_size = mes_header;
-  //}
-  //fifo->mes_header = mes_header;
-  //check_fifo(fifo);
   return fifo;
 }
 

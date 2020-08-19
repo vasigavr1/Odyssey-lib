@@ -200,6 +200,30 @@ static void allocate_work_requests(per_qp_meta_t* qp_meta)
   }
 }
 
+
+static uint16_t get_credit_rows(per_qp_meta_t* qp_meta)
+{
+  switch (qp_meta->flow_type){
+    case SEND_BCAST_LDR_RECV_UNI:
+    case SEND_BCAST_RECV_UNI:
+    case SEND_BCAST_RECV_BCAST:
+    case SEND_UNI_REQ_RECV_REP:
+    case SEND_UNI_REP_TO_BCAST:
+    case SEND_UNI_REP_RECV_UNI_REQ:
+    case SEND_UNI_REP_RECV_UNI_REP:
+      assert(qp_meta->receipient_num == REM_MACH_NUM);
+     return MACHINE_NUM;
+    case SEND_UNI_REQ_RECV_LDR_REP:
+    case SEND_UNI_REP_RECV_LDR_BCAST:
+      assert(qp_meta->receipient_num == 1);
+      return 1;
+    case SEND_UNI_REP_LDR_RECV_UNI_REQ:
+    case RECV_CREDITS:
+    case SEND_CREDITS_LDR_RECV_NONE:
+    default: assert(false);
+  }
+}
+
 static void create_per_qp_meta(per_qp_meta_t* qp_meta,
                                uint32_t send_wr_num,
                                uint32_t recv_wr_num,
@@ -259,7 +283,7 @@ static void create_per_qp_meta(per_qp_meta_t* qp_meta,
     case SEND_BCAST_RECV_UNI:
     case SEND_BCAST_RECV_BCAST:
       qp_meta->ss_batch = (uint32_t) MAX((MIN_SS_BATCH / (receipient_num)), (MAX_BCAST_BATCH + 2));
-      qp_meta->send_q_depth = ((qp_meta->ss_batch * receipient_num) + 10);
+      qp_meta->send_q_depth = ((2 * qp_meta->ss_batch * receipient_num) + 10);
       break;
     case RECV_CREDITS:
       break;
@@ -272,19 +296,16 @@ static void create_per_qp_meta(per_qp_meta_t* qp_meta,
     case SEND_UNI_REP_RECV_UNI_REP:
     case SEND_UNI_REP_LDR_RECV_UNI_REQ:
       qp_meta->ss_batch = (uint32_t) MAX(MIN_SS_BATCH, (send_wr_num + 2));
-      qp_meta->send_q_depth = qp_meta->ss_batch + 3;
+      qp_meta->send_q_depth = (2 * qp_meta->ss_batch) + 3;
       break;
     default: assert(false);
-
-
   }
   qp_meta->recv_q_depth = recv_wr_num + 3;
 
 
   if (credits > 0) {
     qp_meta->needs_credits = true;
-    int credit_rows =
-      receipient_num == 1 ? 1 : MACHINE_NUM;
+    int credit_rows = get_credit_rows(qp_meta);
     qp_meta->credits = malloc(credit_rows * sizeof(uint16_t));
     for (int cr_i = 0; cr_i < credit_rows; ++cr_i) {
       qp_meta->credits[cr_i] = credits;
@@ -326,7 +347,7 @@ static recv_info_t* cust_init_recv_info(uint32_t lkey, per_qp_meta_t *qp_meta,
   assert(recv->buf != NULL);
   recv->recv_wr = qp_meta->recv_wr;
   recv->recv_sgl = qp_meta->recv_sgl;
-
+  if (ENABLE_ASSERTIONS) printf("Recv_wr num %u lkey %u \n", qp_meta->recv_wr_num, lkey);
   for (int i = 0; i < qp_meta->recv_wr_num; i++) {
     // It can be that incoming messages have no payload,
     // and thus sgls (which store buffer pointers) are not useful
@@ -337,6 +358,7 @@ static recv_info_t* cust_init_recv_info(uint32_t lkey, per_qp_meta_t *qp_meta,
       recv->recv_sgl->lkey = lkey;
     }
     else {
+
       recv->recv_wr[i].sg_list = &(recv->recv_sgl[i]);
       recv->recv_sgl[i].length = qp_meta->recv_size;
       recv->recv_sgl[i].lkey = lkey;
@@ -356,7 +378,9 @@ static void init_ctx_recv_infos(context_t *ctx)
                     ctx->mcast_cb->recv_mr->lkey :
                     ctx->rdma_ctx->recv_mr->lkey;
 
-
+    if (ENABLE_ASSERTIONS)
+      my_printf(yellow, "Wrkr %u: Initializing the recv_info for qp %u\n ",
+                ctx->t_id, qp_i);
     qp_meta->recv_info =
       cust_init_recv_info(lkey, qp_meta, qp_meta->recv_qp);
   }
@@ -367,13 +391,16 @@ static void init_ctx_send_mrs(context_t *ctx)
   for (int qp_i = 0; qp_i < ctx->qp_num; ++qp_i) {
     per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_i];
     if (!qp_meta->has_send_fifo) continue;
-    if (ENABLE_ASSERTIONS) printf("Registering %p through %p \n", qp_meta->send_fifo->fifo,
-           qp_meta->send_fifo->fifo +
-           qp_meta->send_fifo->max_byte_size);
+    if (ENABLE_ASSERTIONS)
+      printf("Registering send fifo %p through %p, total %u bytes \n",
+             qp_meta->send_fifo->fifo,
+             qp_meta->send_fifo->fifo +
+             qp_meta->send_fifo->max_byte_size,
+             qp_meta->send_fifo->max_byte_size);
     qp_meta->send_mr = register_buffer(ctx->rdma_ctx->pd,
                                   qp_meta->send_fifo->fifo,
                                   qp_meta->send_fifo->max_byte_size);
-
+    if (ENABLE_ASSERTIONS) printf("Qp_i %u, lkey %u \n", qp_i, qp_meta->send_mr->lkey);
   }
 }
 
@@ -409,6 +436,7 @@ static void const_set_up_wr(context_t *ctx, uint16_t qp_i,
     send_wr->wr.ud.ah = mcast_cb->send_ah[qp_meta->mcast_qp_id];
     send_wr->wr.ud.remote_qpn = mcast_cb->qpn[qp_meta->mcast_qp_id];
     send_wr->wr.ud.remote_qkey = mcast_cb->qkey[qp_meta->mcast_qp_id];
+    assert(ENABLE_MULTICAST);
   }
   else {
     send_wr->wr.ud.ah = rem_qp[rm_id][ctx->t_id][qp_i].ah;
@@ -434,7 +462,6 @@ static void const_set_up_wr(context_t *ctx, uint16_t qp_i,
     send_sgl->lkey = qp_meta->send_mr->lkey;
     send_wr->send_flags = 0;
   }
-
   send_wr->next = last ? NULL : &send_wr[1];
 }
 
@@ -475,8 +502,8 @@ static void init_ctx_send_wrs(context_t *ctx)
       case SEND_UNI_REP_RECV_UNI_REQ:
       case SEND_UNI_REP_RECV_UNI_REP:
         for (uint16_t wr_i = 0; wr_i < qp_meta->send_wr_num; ++wr_i) {
-          uint16_t rm_id = wr_i % qp_meta->receipient_num;
-          rm_id = (uint16_t) (rm_id < ctx->m_id ? rm_id : rm_id + 1);
+          uint16_t rm_id = wr_i % MACHINE_NUM; //qp_meta->receipient_num;
+          //rm_id = (uint16_t) (rm_id < ctx->m_id ? rm_id : rm_id + 1);
           const_set_up_wr(ctx, qp_i, wr_i, wr_i, wr_i == qp_meta->send_wr_num - 1,
                           rm_id);
         }
@@ -625,8 +652,9 @@ static void ctx_prepost_recvs(context_t *ctx)
 {
   for (int qp_i = 0; qp_i < ctx->qp_num; ++qp_i) {
     per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_i];
-    my_printf(yellow, "Wrkr %u QP %u: %s preposts %u recvs\n",
-              ctx->t_id, qp_i, qp_meta->recv_string, qp_meta->recv_wr_num);
+    if (ENABLE_ASSERTIONS)
+      my_printf(yellow, "Wrkr %u QP %u: %s preposts %u recvs\n",
+                ctx->t_id, qp_i, qp_meta->recv_string, qp_meta->recv_wr_num);
     post_recvs_with_recv_info(qp_meta->recv_info,
                               qp_meta->recv_wr_num);
   }
@@ -705,7 +733,7 @@ static void set_up_ctx(context_t *ctx)
   for (int qp_i = 0; qp_i < ctx->qp_num; ++qp_i) {
     ctx->total_recv_buf_size += ctx->qp_meta[qp_i].recv_buf_size;
   }
-  if (ENABLE_ASSERTIONS) printf("total w_size %u \n ", ctx->total_recv_buf_size);
+  if (ENABLE_ASSERTIONS) printf("total size %u \n ", ctx->total_recv_buf_size);
   hrd_ctrl_blk_t *cb =
     hrd_ctrl_blk_init(ctx->t_id,	/* local_hid */
                                    0, -1, /* port_index, numa_node_id */

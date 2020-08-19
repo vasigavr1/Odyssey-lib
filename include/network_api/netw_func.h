@@ -82,11 +82,11 @@ static inline void ctx_forge_unicast_wr(context_t *ctx,
   send_sgl[mes_i].length = get_fifo_slot_meta_pull(qp_meta->send_fifo)->byte_size;
   send_sgl[mes_i].addr = (uintptr_t) get_fifo_pull_slot(qp_meta->send_fifo);
 
-  if (qp_meta->receipient_num > 1) {
+  //if (qp_meta->receipient_num > 1) {
     uint8_t rm_id = get_fifo_slot_meta_pull(qp_meta->send_fifo)->rm_id;
     send_wr[mes_i].wr.ud.ah = rem_qp[rm_id][ctx->t_id][qp_id].ah;
     send_wr[mes_i].wr.ud.remote_qpn = (uint32_t) rem_qp[rm_id][ctx->t_id][qp_id].qpn;
-  }
+  //}
 
 
   selective_signaling_for_unicast(&qp_meta->sent_tx, qp_meta->ss_batch, send_wr,
@@ -160,12 +160,13 @@ static inline void ctx_send_unicasts(context_t *ctx,
 
   if (mes_i > 0) {
     if (qp_meta->recv_wr_num > qp_meta->recv_info->posted_recvs)
-      post_recvs_with_recv_info(qp_meta->recv_info, qp_meta->recv_wr_num - qp_meta->recv_info->posted_recvs);
-    //printf("W_i %u, length %u, address %p/ %p \n", mes_i, qp_meta->send_wr[0].sg_list->length,
-    //       (void *)qp_meta->send_wr[0].sg_list->addr, send_fifo->fifo);
+      post_recvs_with_recv_info(qp_meta->recv_info,
+                                qp_meta->recv_wr_num - qp_meta->recv_info->posted_recvs);
+    //printf("Mes_i %u length %u, address %p/ %p \n", mes_i, qp_meta->send_wr[0].sg_list->length,
+    //       (void *) qp_meta->send_wr->sg_list->addr, send_fifo->fifo);
     qp_meta->send_wr[mes_i - 1].next = NULL;
     ctx_check_unicast_before_send(ctx, qp_meta->leader_m_id, qp_id);
-    int ret = ibv_post_send(qp_meta->send_qp, &qp_meta->send_wr[0], &bad_send_wr);
+    int ret = ibv_post_send(qp_meta->send_qp, qp_meta->send_wr, &bad_send_wr);
     CPE(ret, "Unicast ibv_post_send error", ret);
   }
 }

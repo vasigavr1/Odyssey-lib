@@ -222,7 +222,7 @@ void custom_mica_populate_fixed_len(mica_kv_t * kvs, int n, int val_len) {
     op->key_id = key_id;
     mica_insert_one(kvs, op);
   }
-
+  free(op);
   assert(kvs->num_insert_op == n);
   // printf("Cache: Populated instance %d with %d keys, length = %d. "
   // 			   "Index eviction fraction = %.4f.\n",
