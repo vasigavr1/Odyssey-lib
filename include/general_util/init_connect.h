@@ -42,7 +42,7 @@ static int spawn_stats_thread() {
 
 
 // Worker calls this function to connect with all workers
-static void get_qps_from_all_other_machines(hrd_ctrl_blk_t *cb)
+static void get_qps_from_all_other_machines(context_t *ctx)
 {
   int g_i, qp_i, w_i, m_i;
   int ib_port_index = 0;
@@ -51,7 +51,7 @@ static void get_qps_from_all_other_machines(hrd_ctrl_blk_t *cb)
     if (g_i / WORKERS_PER_MACHINE == machine_id) continue; // skip the local machine
     w_i = g_i % WORKERS_PER_MACHINE;
     m_i = g_i / WORKERS_PER_MACHINE;
-    for (qp_i = 0; qp_i < cb->num_dgram_qps; qp_i++) {
+    for (qp_i = 0; qp_i < ctx->qp_num; qp_i++) {
       /* Compute the control block and physical port index for client @i */
       int local_port_i = ib_port_index;
       assert(all_qp_attr->wrkr_qp != NULL);
@@ -80,7 +80,7 @@ static void get_qps_from_all_other_machines(hrd_ctrl_blk_t *cb)
         ah_attr.grh.sgid_index = 0;
         ah_attr.grh.hop_limit = 1;
       }
-      rem_qp[m_i][w_i][qp_i].ah = ibv_create_ah(cb->pd, &ah_attr);
+      rem_qp[m_i][w_i][qp_i].ah = ibv_create_ah(ctx->rdma_ctx->pd, &ah_attr);
       rem_qp[m_i][w_i][qp_i].qpn = wrkr_qp->qpn;
       // printf("%d %d %d success\n", m_i, w_i, qp_i );
       assert(rem_qp[m_i][w_i][qp_i].ah != NULL);
@@ -186,18 +186,20 @@ static void set_up_qp_attr_server(int qp_num)
 
 
 // Used by all kinds of threads to publish their QPs
-static void fill_qps(uint16_t t_id, hrd_ctrl_blk_t *cb)
+static void fill_qps(context_t *ctx)
 {
+  rdma_context_t *r_ctx = ctx->rdma_ctx;
   uint32_t qp_i;
-  for (qp_i = 0; qp_i < cb->num_dgram_qps; qp_i++) {
-    struct qp_attr *qp_attr = &all_qp_attr->wrkr_qp[machine_id][t_id][qp_i];
-    qp_attr->lid = hrd_get_local_lid(cb->dgram_qp[qp_i]->context, cb->dev_port_id);
-    qp_attr->qpn = cb->dgram_qp[qp_i]->qp_num;
+  for (qp_i = 0; qp_i <ctx->qp_num; qp_i++) {
+    per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_i];
+    struct qp_attr *qp_attr = &all_qp_attr->wrkr_qp[machine_id][ctx->t_id][qp_i];
+    qp_attr->lid = hrd_get_local_lid(qp_meta->send_qp->context, r_ctx->dev_port_id);
+    qp_attr->qpn = qp_meta->send_qp->qp_num;
     qp_attr->sl = DEFAULT_SL;
     //   ---ROCE----------
     if (is_roce == 1) {
       union ibv_gid ret_gid;
-      ibv_query_gid(cb->ctx, IB_PHYS_PORT, 0, &ret_gid);
+      ibv_query_gid(r_ctx->ibv_ctx, IB_PHYS_PORT, 0, &ret_gid);
       qp_attr->gid_global_interface_id = ret_gid.global.interface_id;
       qp_attr->gid_global_subnet_prefix = ret_gid.global.subnet_prefix;
     }
@@ -207,16 +209,15 @@ static void fill_qps(uint16_t t_id, hrd_ctrl_blk_t *cb)
 }
 
 // All workers both use this to establish connections
-static void setup_connections(uint16_t t_id,
-                              hrd_ctrl_blk_t *cb)
+static void setup_connections(context_t *ctx)
 {
-  fill_qps(t_id, cb);
+  fill_qps(ctx);
 
-  if (t_id == 0) {
+  if (ctx->t_id == 0) {
     while(workers_with_filled_qp_attr != WORKERS_PER_MACHINE);
-    if (machine_id == 0) set_up_qp_attr_server(cb->num_dgram_qps);
-    else set_up_qp_attr_client(cb->num_dgram_qps);
-    get_qps_from_all_other_machines(cb);
+    if (machine_id == 0) set_up_qp_attr_server(ctx->qp_num);
+    else set_up_qp_attr_client(ctx->qp_num);
+    get_qps_from_all_other_machines(ctx);
   }
 }
 
@@ -232,13 +233,12 @@ static void thread_zero_spawns_stat_thread(uint16_t t_id)
 
 
 
-static void setup_connections_and_spawn_stats_thread(hrd_ctrl_blk_t *cb,
-                                                     uint16_t t_id)
+static void setup_connections_and_spawn_stats_thread(context_t *ctx)
 {
-  setup_connections(t_id, cb);
-  thread_zero_spawns_stat_thread(t_id);
+  setup_connections(ctx);
+  thread_zero_spawns_stat_thread(ctx->t_id);
 
-  if (t_id == 0) atomic_store_explicit(&qps_are_set_up, true, memory_order_release);
+  if (ctx->t_id == 0) atomic_store_explicit(&qps_are_set_up, true, memory_order_release);
   else {
     while (!atomic_load_explicit(&qps_are_set_up, memory_order_acquire));
     usleep(200000);

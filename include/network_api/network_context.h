@@ -126,9 +126,11 @@ typedef struct per_qp_meta {
 } per_qp_meta_t;
 
 typedef struct rdma_context {
+  struct ibv_context *ibv_ctx;
   struct ibv_mr *recv_mr;
   struct ibv_pd *pd;
   uint16_t *local_id;
+  int dev_port_id;
 } rdma_context_t;
 
 
@@ -645,6 +647,8 @@ static void init_rdma_ctx(context_t *ctx, hrd_ctrl_blk_t *cb)
     ctx->rdma_ctx->local_id[qp_i] = hrd_get_local_lid(cb->dgram_qp[qp_i]->context,
                                                       cb->dev_port_id);
   }
+  ctx->rdma_ctx->dev_port_id = cb->dev_port_id;
+  ctx->rdma_ctx->ibv_ctx = cb->ctx;
 }
 
 static void ctx_prepost_recvs(context_t *ctx)
