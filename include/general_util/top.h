@@ -35,7 +35,7 @@
 #include <stdbool.h>
 
 
-enum {error_sys, kite_sys = 141, zookeeper_sys = 142};
+enum {error_sys, kite_sys = 141, zookeeper_sys = 142, derecho_sys};
 
 //#define COMPILED_SYSTEM zookeeper_sys
 
@@ -49,10 +49,17 @@ enum {error_sys, kite_sys = 141, zookeeper_sys = 142};
 #define COMPILED_SYSTEM zookeeper_sys
 #endif
 
+#ifdef DERECHO
+  #define COMPILED_SYSTEM derecho_sys
+#endif
+
 ///Default for the IDE
 #ifndef KITE
   #ifndef ZOOKEEPER
-    #define COMPILED_SYSTEM zookeeper_sys
+    #ifndef DERECHO
+      #define ZOOKEPER
+      #define COMPILED_SYSTEM zookeeper_sys
+    #endif
   #endif
 #endif
 
@@ -62,6 +69,7 @@ enum {error_sys, kite_sys = 141, zookeeper_sys = 142};
 void *print_stats(void*);
 void *client(void *);
 void *worker(void *arg);
+
 
 //Forward declaring
 typedef struct key mica_key_t;

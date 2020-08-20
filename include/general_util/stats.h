@@ -17,6 +17,19 @@
 
 // Store statistics from the workers, for the stats thread to use
 typedef struct thread_stats t_stats_t;
+typedef struct stats all_stats_t;
+typedef struct client_stats c_stats_t;
+
+
+
+typedef struct stats_ctx {
+  double seconds;
+  uint16_t print_count;
+  t_stats_t *curr_w_stats;
+  t_stats_t *prev_w_stats;
+  c_stats_t *curr_c_stats;
+  c_stats_t *prev_c_stats;
+} stats_ctx_t;
 
 
 typedef struct client_stats {

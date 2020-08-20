@@ -3,7 +3,7 @@
 //
 
 #include "kvs.h"
-#include <init_func.h>
+
 
 #include "kvs.h"
 
@@ -22,7 +22,7 @@
   #define appl_init_func dr_init_functionality
 #endif
 
-
+#include <init_func.h>
 
 
 
