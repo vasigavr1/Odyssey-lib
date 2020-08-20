@@ -35,21 +35,25 @@
 #include <stdbool.h>
 
 
-enum {error_sys, kite_sys, zookeeper_sys};
+enum {error_sys, kite_sys = 141, zookeeper_sys = 142};
+
+//#define COMPILED_SYSTEM zookeeper_sys
+
+
 
 #ifdef KITE
-#define COMPILED_SYSTEM kite_sys
+  #define COMPILED_SYSTEM kite_sys
 #endif
-
 
 #ifdef ZOOKEEPER
 #define COMPILED_SYSTEM zookeeper_sys
 #endif
 
+///Default for the IDE
 #ifndef KITE
-#ifndef ZOOKEEPER
-#define COMPILED_SYSTEM kite_sys
-#endif
+  #ifndef ZOOKEEPER
+    #define COMPILED_SYSTEM zookeeper_sys
+  #endif
 #endif
 
 
@@ -57,6 +61,7 @@ enum {error_sys, kite_sys, zookeeper_sys};
 // Stats thread
 void *print_stats(void*);
 void *client(void *);
+void *worker(void *arg);
 
 //Forward declaring
 typedef struct key mica_key_t;
@@ -93,7 +98,7 @@ typedef struct key mica_key_t;
 #define CLIENTS_PER_MACHINE (ENABLE_CLIENTS ? CLIENTS_PER_MACHINE_ : 0)
 #define ENABLE_LOCK_FREE_READING 1
 
-#define ENABLE_ASSERTIONS 1
+#define ENABLE_ASSERTIONS 0
 
 #define PUT_A_MACHINE_TO_SLEEP 1
 #define MACHINE_THAT_SLEEPS 1
@@ -245,7 +250,7 @@ enum {
 	-----------------MULTICAST-------------------------
 --------------------------------------------------*/
 // Multicast defines are not used, but are kept them for possible extension
-#define ENABLE_MULTICAST_ 1
+#define ENABLE_MULTICAST_ 0
 #define ENABLE_MULTICAST ENABLE_MULTICAST_
 #define MULTICAST_TESTING_ 0
 #define MULTICAST_TESTING (ENABLE_MULTICAST == 1 ? MULTICAST_TESTING_ : 0)

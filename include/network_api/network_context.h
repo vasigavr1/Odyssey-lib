@@ -162,7 +162,7 @@ static void check_ctx(context_t *ctx)
     assert(qp_meta->recv_qp != NULL);
   }
 
-  if (ENABLE_ASSERTIONS) my_printf(green, "CTX checked \n");
+  if (ENABLE_ASSERTIONS && ctx->t_id == 0) my_printf(green, "CTX checked \n");
 
 }
 
@@ -349,7 +349,7 @@ static recv_info_t* cust_init_recv_info(uint32_t lkey, per_qp_meta_t *qp_meta,
   assert(recv->buf != NULL);
   recv->recv_wr = qp_meta->recv_wr;
   recv->recv_sgl = qp_meta->recv_sgl;
-  if (ENABLE_ASSERTIONS) printf("Recv_wr num %u lkey %u \n", qp_meta->recv_wr_num, lkey);
+  //if (ENABLE_ASSERTIONS) printf("Recv_wr num %u lkey %u \n", qp_meta->recv_wr_num, lkey);
   for (int i = 0; i < qp_meta->recv_wr_num; i++) {
     // It can be that incoming messages have no payload,
     // and thus sgls (which store buffer pointers) are not useful
@@ -380,7 +380,7 @@ static void init_ctx_recv_infos(context_t *ctx)
                     ctx->mcast_cb->recv_mr->lkey :
                     ctx->rdma_ctx->recv_mr->lkey;
 
-    if (ENABLE_ASSERTIONS)
+    if (ENABLE_ASSERTIONS && ctx->t_id == 0)
       my_printf(yellow, "Wrkr %u: Initializing the recv_info for qp %u\n ",
                 ctx->t_id, qp_i);
     qp_meta->recv_info =
@@ -393,7 +393,7 @@ static void init_ctx_send_mrs(context_t *ctx)
   for (int qp_i = 0; qp_i < ctx->qp_num; ++qp_i) {
     per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_i];
     if (!qp_meta->has_send_fifo) continue;
-    if (ENABLE_ASSERTIONS)
+    if (ENABLE_ASSERTIONS && ctx->t_id == 0)
       printf("Registering send fifo %p through %p, total %u bytes \n",
              qp_meta->send_fifo->fifo,
              qp_meta->send_fifo->fifo +
@@ -402,7 +402,7 @@ static void init_ctx_send_mrs(context_t *ctx)
     qp_meta->send_mr = register_buffer(ctx->rdma_ctx->pd,
                                   qp_meta->send_fifo->fifo,
                                   qp_meta->send_fifo->max_byte_size);
-    if (ENABLE_ASSERTIONS) printf("Qp_i %u, lkey %u \n", qp_i, qp_meta->send_mr->lkey);
+    if (ENABLE_ASSERTIONS && ctx->t_id == 0) printf("Qp_i %u, lkey %u \n", qp_i, qp_meta->send_mr->lkey);
   }
 }
 
@@ -533,7 +533,7 @@ static void set_per_qp_meta_recv_fifos(context_t *ctx)
       qp_meta->recv_fifo->fifo = prev_qp_meta->recv_fifo->fifo +
         prev_qp_meta->recv_fifo->max_byte_size;
     }
-    if (ENABLE_ASSERTIONS) {
+    if (ENABLE_ASSERTIONS && ctx->t_id == 0) {
       printf("Recv fifo for qp %u starts at %p ends at %p, total size %u, slot number %u \n",
              qp_i, qp_meta->recv_fifo->fifo, qp_meta->recv_fifo->fifo + qp_meta->recv_fifo->max_byte_size,
              qp_meta->recv_fifo->max_byte_size, qp_meta->recv_buf_slot_num);
@@ -559,7 +559,7 @@ static int *get_send_q_depths(per_qp_meta_t* qp_meta, uint16_t qp_num)
   for (int i = 0; i < qp_num; ++i) {
     send_q_depth[i] = qp_meta[i].send_q_depth;
     if (send_q_depth[i] == 0) send_q_depth[i] = 1;
-    if (ENABLE_ASSERTIONS) printf("Send q depth %u --> %u \n ", i, send_q_depth[i]);
+    //if (ENABLE_ASSERTIONS) printf("Send q depth %u --> %u \n ", i, send_q_depth[i]);
   }
   return send_q_depth;
 }
@@ -656,7 +656,7 @@ static void ctx_prepost_recvs(context_t *ctx)
 {
   for (int qp_i = 0; qp_i < ctx->qp_num; ++qp_i) {
     per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_i];
-    if (ENABLE_ASSERTIONS)
+    if (ENABLE_ASSERTIONS && ctx->t_id == 0)
       my_printf(yellow, "Wrkr %u QP %u: %s preposts %u recvs\n",
                 ctx->t_id, qp_i, qp_meta->recv_string, qp_meta->recv_wr_num);
     post_recvs_with_recv_info(qp_meta->recv_info,
@@ -737,7 +737,7 @@ static void set_up_ctx(context_t *ctx)
   for (int qp_i = 0; qp_i < ctx->qp_num; ++qp_i) {
     ctx->total_recv_buf_size += ctx->qp_meta[qp_i].recv_buf_size;
   }
-  if (ENABLE_ASSERTIONS) printf("total size %u \n ", ctx->total_recv_buf_size);
+  if (ENABLE_ASSERTIONS && ctx->t_id == 0) printf("total size %u \n ", ctx->total_recv_buf_size);
   hrd_ctrl_blk_t *cb =
     hrd_ctrl_blk_init(ctx->t_id,	/* local_hid */
                                    0, -1, /* port_index, numa_node_id */

@@ -2,15 +2,15 @@
 // Created by vasilis on 23/06/2020.
 //
 
-#ifndef KITE_GENERIC_FUNC_H
-#define KITE_GENERIC_FUNC_H
+#ifndef OD_LIB_INIT_FUNC_H
+#define OD_LIB_INIT_FUNC_H
 
 #include "top.h"
 #include "stats.h"
 #include <getopt.h>
 #include "kvs.h"
 
-static void static_assert_compile_parameters()
+static void generic_static_assert_compile_parameters()
 {
   assert(MICA_OP_SIZE == sizeof(mica_op_t));
   static_assert(IS_ALIGNED(MICA_VALUE_SIZE, 32), "VALUE_SIZE must be aligned with 32 bytes ");
@@ -103,7 +103,7 @@ static void handle_program_inputs(int argc, char *argv[])
   }
 }
 
-static void init_globals(int qp_num)
+static void generic_init_globals(int qp_num)
 {
   time_approx = 0;
   workers_with_filled_qp_attr = 0;
@@ -239,4 +239,4 @@ static void fopen_client_logs(uint16_t i)
 
 
 
-#endif //KITE_GENERIC_FUNC_H
+#endif //OD_LIB_INIT_FUNC_H

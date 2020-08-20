@@ -12,6 +12,9 @@
   #include "config.h"
 #endif
 
+#ifdef DERECHO
+	#include "../../../zookeeper/include/derecho/dr_config.h"
+#endif
 
 #ifdef ZOOKEEPER
   #include "zk_config.h"
@@ -19,7 +22,9 @@
 
 #ifndef KITE
   #ifndef ZOOKEEPER
-    #include "zk_config.h"
+  	#ifndef DERECHO
+    	#include "zk_config.h"
+    #endif
   #endif
 #endif
 
