@@ -106,7 +106,7 @@ typedef struct key mica_key_t;
 #define CLIENTS_PER_MACHINE (ENABLE_CLIENTS ? CLIENTS_PER_MACHINE_ : 0)
 #define ENABLE_LOCK_FREE_READING 1
 
-#define ENABLE_ASSERTIONS 0
+#define ENABLE_ASSERTIONS 1
 
 #define PUT_A_MACHINE_TO_SLEEP 1
 #define MACHINE_THAT_SLEEPS 1
@@ -174,7 +174,7 @@ typedef struct key mica_key_t;
 -----------------DEBUGGING-------------------------
 --------------------------------------------------*/
 //It may be that ENABLE_ASSERTIONS  must be up for these to work
-#define DEBUG_PREPARES 0 // zookeeper only
+#define DEBUG_PREPARES 0
 #define DEBUG_COMMITS 0
 #define DEBUG_WRITES 0
 #define DEBUG_ACKS 0
@@ -422,7 +422,6 @@ extern struct wrk_clt_if interface[WORKERS_PER_MACHINE];
 
 extern uint64_t last_pulled_req[SESSIONS_PER_MACHINE];
 extern uint64_t last_pushed_req[SESSIONS_PER_MACHINE];
-
 
 
 

@@ -73,6 +73,7 @@ typedef struct per_qp_meta {
   uint32_t recv_q_depth;
   flow_type_t flow_type;
   recv_type_t recv_type;
+  uint16_t recv_qp_id;
 
   uint32_t receipient_num;
   uint32_t remote_senders_num;
@@ -232,6 +233,8 @@ static void create_per_qp_meta(per_qp_meta_t* qp_meta,
                                flow_type_t flow_type,
                                recv_type_t recv_type,
 
+                               uint16_t recv_qp_id,
+
                                uint32_t receipient_num,
                                uint32_t remote_senders_num,
                                uint32_t recv_fifo_slot_num,
@@ -267,6 +270,7 @@ static void create_per_qp_meta(per_qp_meta_t* qp_meta,
   qp_meta->mcast_recv = mcast_recv;
   qp_meta->mcast_qp_id = mcast_qp_id;
   qp_meta->completed_but_not_polled = 0;
+  qp_meta->recv_qp_id = recv_qp_id;
 
 
   if (send_string != NULL) {

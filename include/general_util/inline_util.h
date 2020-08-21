@@ -5,8 +5,8 @@
 #ifndef INLINE_UTIL_H
 #define INLINE_UTIL_H
 
-#include "debug_util.h"
 #include "client_if_util.h"
+#include "debug_util.h"
 #include "latency_util.h"
 #include "rdma_gen_util.h"
 #include "generic_inline_util.h"

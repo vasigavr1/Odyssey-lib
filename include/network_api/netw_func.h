@@ -9,9 +9,36 @@
 #include <rdma_gen_util.h>
 #include "network_context.h"
 
+/* ---------------------------------------------------------------------------
+//------------------------------ INSERT --------------------------------
+//---------------------------------------------------------------------------*/
+
+static inline void ctx_insert_mes(context_t *ctx, uint16_t qp_id,
+                                  uint32_t send_size,
+                                  uint32_t recv_size,
+                                  bool break_message,
+                                  void* source,
+                                  uint32_t source_flag)
+{
+  per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_id];
+  fifo_t* send_fifo = qp_meta->send_fifo;
+  void *ptr = get_send_fifo_ptr(send_fifo, send_size, recv_size,
+                                break_message, ctx->t_id);
+
+  qp_meta->mfs->insert_helper(ctx, ptr, source, source_flag);
+
+  slot_meta_t *slot_meta = get_fifo_slot_meta_push(send_fifo);
 
 
+  if (slot_meta->coalesce_num == 1)
+    fifo_incr_capacity(send_fifo);
 
+  fifo_incr_net_capacity(send_fifo);
+}
+
+/* ---------------------------------------------------------------------------
+//------------------------------ BROADCASTS --------------------------------
+//---------------------------------------------------------------------------*/
 
 // Form the Broadcast work request for the prepare
 static inline void ctx_forge_bcast_wr(context_t *ctx,
@@ -32,6 +59,7 @@ static inline void ctx_forge_bcast_wr(context_t *ctx,
 static inline void ctx_send_broadcasts(context_t *ctx, uint16_t qp_id)
 {
   per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_id];
+  per_qp_meta_t *recv_qp_meta = &ctx->qp_meta[qp_meta->recv_qp_id];
   uint16_t br_i = 0, mes_sent = 0, available_credits = 0;
   fifo_t *send_fifo = qp_meta->send_fifo;
   if (send_fifo->net_capacity == 0) return;
@@ -51,18 +79,20 @@ static inline void ctx_send_broadcasts(context_t *ctx, uint16_t qp_id)
 
 
     if (br_i == MAX_BCAST_BATCH) {
-      post_quorum_broadasts_and_recvs(qp_meta->recv_info, qp_meta->recv_wr_num - qp_meta->recv_info->posted_recvs,
+      post_quorum_broadasts_and_recvs(recv_qp_meta->recv_info,
+                                      recv_qp_meta->recv_wr_num - recv_qp_meta->recv_info->posted_recvs,
                                       ctx->q_info, br_i, qp_meta->sent_tx, qp_meta->send_wr,
                                       qp_meta->send_qp, qp_meta->enable_inlining);
       br_i = 0;
     }
   }
   if (br_i > 0) {
-    post_quorum_broadasts_and_recvs(qp_meta->recv_info, qp_meta->recv_wr_num - qp_meta->recv_info->posted_recvs,
+    post_quorum_broadasts_and_recvs(recv_qp_meta->recv_info,
+                                    recv_qp_meta->recv_wr_num - recv_qp_meta->recv_info->posted_recvs,
                                     ctx->q_info, br_i, qp_meta->sent_tx, qp_meta->send_wr,
                                     qp_meta->send_qp, qp_meta->enable_inlining);
   }
-  if (ENABLE_ASSERTIONS) assert(qp_meta->recv_info->posted_recvs <= qp_meta->recv_wr_num);
+  if (ENABLE_ASSERTIONS) assert(recv_qp_meta->recv_info->posted_recvs <= recv_qp_meta->recv_wr_num);
   if (mes_sent > 0) decrease_credits(qp_meta->credits, ctx->q_info, mes_sent);
 }
 
@@ -96,9 +126,6 @@ static inline void ctx_forge_unicast_wr(context_t *ctx,
   if (mes_i > 0) send_wr[mes_i - 1].next = &send_wr[mes_i];
 
 }
-
-
-
 
 
 static inline bool ctx_can_send_unicasts (per_qp_meta_t *qp_meta)

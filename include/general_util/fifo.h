@@ -343,7 +343,6 @@ static inline void fifo_send_from_pull_slot(fifo_t* send_fifo)
 // Generic function to mirror buffer spaces--used when elements are added
 static inline void add_to_the_mirrored_buffer(struct fifo *mirror_buf, uint8_t coalesce_num,
                                               uint16_t number_of_fifos,
-                                              uint32_t max_size,
                                               quorum_info_t *q_info)
 {
   for (uint16_t i = 0; i < number_of_fifos; i++) {
@@ -352,12 +351,12 @@ static inline void add_to_the_mirrored_buffer(struct fifo *mirror_buf, uint8_t c
     fifo[push_ptr] = (uint16_t) coalesce_num;
     fifo_incr_push_ptr(&mirror_buf[i]);
     mirror_buf[i].capacity++;
-    if (mirror_buf[i].capacity > max_size) {
+    if (mirror_buf[i].capacity > mirror_buf[i].max_size) {
       // this may noy be an error if there is a failure
       assert(q_info != NULL);
       assert(q_info->missing_num > 0);
     }
-    //if (ENABLE_ASSERTIONS) assert(mirror_buf[i].capacity <= max_size);
+    //if (ENABLE_ASSERTIONS) assert(mirror_buf[i].capacity <= mirror_buf[i].max_size);
   }
 }
 

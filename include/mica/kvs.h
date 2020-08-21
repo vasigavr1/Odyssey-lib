@@ -6,7 +6,10 @@
 # define _GNU_SOURCE
 #endif
 
+#include <generic_inline_util.h>
 #include "top.h"
+#include "client_if_util.h"
+#include <debug_util.h>
 
 #ifdef KITE
   #include "config.h"
@@ -146,6 +149,21 @@ static inline void KVS_locate_all_kv_pairs(uint16_t op_num, uint *tag, struct mi
 	}
 }
 
+
+
+static inline void KVS_local_read(mica_op_t *kv_ptr,
+                                  uint8_t *value_to_read,
+                                  uint8_t *resp_type,
+                                  uint16_t t_id)
+{
+  uint32_t debug_cntr = 0;
+  uint64_t tmp_lock = read_seqlock_lock_free(&kv_ptr->seqlock);
+  do {
+    debug_stalling_on_lock(&debug_cntr, "local read", t_id);
+    memcpy(value_to_read, kv_ptr->value, (size_t) VALUE_SIZE);
+  } while (!(check_seqlock_lock_free(&kv_ptr->seqlock, &tmp_lock)));
+  *resp_type = KVS_LOCAL_GET_SUCCESS;
+}
 
 
 
