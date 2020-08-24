@@ -33,6 +33,9 @@ enum {COMPARE_AND_SWAP_STRONG = 96,
 };
 
 
+#define OP_ACK 115
+#define ACK_NOT_YET_SENT 117
+
 // when inserting the commit use this OP and change it to COMMIT_OP
 // before broadcasting. The purpose is for the state of the commit message to be tagged as SENT_RMW_ACQ
 // such that whens acks are gathered, it will be recognized that local entry need not get freed

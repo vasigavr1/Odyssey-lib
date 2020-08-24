@@ -241,5 +241,129 @@ static inline void ctx_poll_incoming_messages(context_t *ctx, uint16_t qp_id)
 }
 
 
+/* ---------------------------------------------------------------------------
+//------------------------------ ACKS --------------------------------
+//---------------------------------------------------------------------------*/
+
+static inline uint32_t ctx_find_when_the_ack_points_acked(ack_mes_t *ack,
+                                                          fifo_t *rob,
+                                                          uint64_t pull_lid,
+                                                          uint32_t *ack_num)
+{
+  if (pull_lid >= ack->l_id) {
+    (*ack_num) -= (pull_lid - ack->l_id);
+    if (ENABLE_ASSERTIONS) assert(*ack_num > 0 && *ack_num <= rob->max_size);
+    return rob->pull_ptr;
+  }
+  else { // l_id > pull_lid
+    return (uint32_t) (rob->pull_ptr + (ack->l_id - pull_lid)) % rob->max_size;
+  }
+}
+
+///
+static inline void ctx_increase_credits_on_polling_ack(context_t *ctx,
+                                                       uint16_t qp_id,
+                                                       ack_mes_t *ack)
+{
+  per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_id];
+  ctx->qp_meta[qp_meta->recv_qp_id].credits[ack->m_id] += ack->credits;
+  if (ctx->qp_meta[qp_meta->recv_qp_id].credits[ack->m_id] > ctx->qp_meta[qp_meta->recv_qp_id].max_credits) {
+    if (ENABLE_ASSERTIONS) assert(ctx->qp_meta[qp_meta->recv_qp_id].mcast_send);
+    ctx->qp_meta[qp_meta->recv_qp_id].credits[ack->m_id] = ctx->qp_meta[qp_meta->recv_qp_id].max_credits;
+  }
+}
+
+// Returns true if the insert is successful,
+// if not  (it's probably because the machine lost some messages)
+// the old ack needs to be sent, before we try again to insert
+static inline bool ctx_ack_insert(context_t *ctx,
+                                  uint16_t qp_id,
+                                  uint8_t mes_num,
+                                  uint64_t l_id,
+                                  const uint8_t m_id)
+{
+  per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_id];
+  ack_mes_t *acks = (ack_mes_t *) qp_meta->send_fifo->fifo;
+  ack_mes_t *ack = &acks[m_id];
+  if (ENABLE_ASSERTIONS && ack->opcode != OP_ACK) {
+    if(unlikely(ack->l_id) + ack->ack_num != l_id) {
+      my_printf(red, "Wrkr %u: Adding to existing ack for machine %u  with l_id %lu, "
+                  "ack_num %u with new l_id %lu, coalesce_num %u, opcode %u\n", ctx->t_id, m_id,
+                ack->l_id, ack->ack_num, l_id, mes_num, ack->opcode);
+      //assert(false);
+      return false;
+    }
+  }
+  if (ack->opcode == OP_ACK) {// new ack
+    //if (ENABLE_ASSERTIONS) assert((ack->l_id) + ack->ack_num == l_id);
+    memcpy(&ack->l_id, &l_id, sizeof(uint64_t));
+    ack->credits = 1;
+    ack->ack_num = mes_num;
+    ack->opcode = ACK_NOT_YET_SENT;
+    if (DEBUG_ACKS) my_printf(yellow, "Create an ack with l_id  %lu \n", ack->l_id);
+  }
+  else {
+    if (ENABLE_ASSERTIONS) {
+      assert(ack->l_id + ((uint64_t) ack->ack_num) == l_id);
+      //assert(W_CREDITS > 1);
+      //if (ack->credits > W_CREDITS) {
+      //  printf("attempting to put %u credits in ack (W_credits = %u)\n",
+      //         ack->credits, W_CREDITS);
+      //  assert(ENABLE_MULTICAST);
+      //}
+    }
+    ack->credits++;
+    ack->ack_num += mes_num;
+  }
+  return true;
+}
+
+
+
+static inline void ctx_send_acks(context_t *ctx, uint16_t qp_id)
+{
+  per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_id];
+  per_qp_meta_t *recv_qp_meta = &ctx->qp_meta[qp_meta->recv_qp_id];
+  //p_ops_t *p_ops = (p_ops_t *) ctx->appl_ctx;
+  ack_mes_t *acks = (ack_mes_t *) qp_meta->send_fifo->fifo;
+  uint8_t ack_i = 0, prev_ack_i = 0, first_wr = 0;
+  struct ibv_send_wr *bad_send_wr;
+  uint32_t recvs_to_post_num = 0;
+
+  for (uint8_t m_i = 0; m_i <= qp_meta->receipient_num; m_i++) {
+    if (acks[m_i].opcode == OP_ACK) continue;
+    //checks_stats_prints_when_sending_acks(acks, m_i, ctx->t_id);
+    acks[m_i].opcode = OP_ACK;
+
+    selective_signaling_for_unicast(&qp_meta->sent_tx, qp_meta->ss_batch, qp_meta->send_wr,
+                                    m_i, qp_meta->send_cq, true, qp_meta->send_string, ctx->t_id);
+    if (ack_i > 0) {
+      if (DEBUG_ACKS)
+        my_printf(yellow, "Wrkr %u, ack %u points to ack %u \n", ctx->t_id, prev_ack_i, m_i);
+      qp_meta->send_wr[prev_ack_i].next = &qp_meta->send_wr[m_i];
+    }
+    else first_wr = m_i;
+
+    recvs_to_post_num += acks[m_i].credits;
+    ack_i++;
+    prev_ack_i = m_i;
+  }
+  //Post receives
+  if (recvs_to_post_num > 0) {
+    post_recvs_with_recv_info(recv_qp_meta->recv_info, recvs_to_post_num);
+    //checks_when_posting_write_receives(qp_meta->recv_info, recvs_to_post_num, ack_i);
+  }
+  // SEND the acks
+  if (ack_i > 0) {
+    if (DEBUG_ACKS) printf("Wrkr %u send %u acks, last recipient %u, first recipient %u \n",
+                           ctx->t_id, ack_i, prev_ack_i, first_wr);
+    qp_meta->send_wr[prev_ack_i].next = NULL;
+    int ret = ibv_post_send(qp_meta->send_qp, &qp_meta->send_wr[first_wr], &bad_send_wr);
+    if (ENABLE_ASSERTIONS) CPE(ret, "ACK ibv_post_send error", ret);
+  }
+}
+
+
+
 
 #endif //ODYSSEY_NETW_FUNC_H
