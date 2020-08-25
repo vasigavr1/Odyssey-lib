@@ -98,9 +98,9 @@ typedef struct key mica_key_t;
 #define KVS_SOCKET 0// (WORKERS_PER_MACHINE < 30 ? 0 : 1 )// socket where the cache is bind
 
 // CORE CONFIGURATION
-#define WORKERS_PER_MACHINE 20
+#define WORKERS_PER_MACHINE 1
 #define MACHINE_NUM 5
-#define SESSIONS_PER_THREAD 40
+#define SESSIONS_PER_THREAD 10
 #define ENABLE_CLIENTS 0
 #define CLIENTS_PER_MACHINE_ 5
 #define CLIENTS_PER_MACHINE (ENABLE_CLIENTS ? CLIENTS_PER_MACHINE_ : 0)
@@ -174,10 +174,10 @@ typedef struct key mica_key_t;
 -----------------DEBUGGING-------------------------
 --------------------------------------------------*/
 //It may be that ENABLE_ASSERTIONS  must be up for these to work
-#define DEBUG_PREPARES 0
+#define DEBUG_PREPARES 1
 #define DEBUG_COMMITS 0
 #define DEBUG_WRITES 0
-#define DEBUG_ACKS 0
+#define DEBUG_ACKS 1
 #define DEBUG_READS 0
 #define DEBUG_READ_REPS 0
 #define DEBUG_TS 0
