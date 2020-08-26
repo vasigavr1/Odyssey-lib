@@ -133,7 +133,7 @@ typedef struct key mica_key_t;
 //-------------------------------------------
 /* ----------TRACE------------------------ */
 //-------------------------------------------
-#define WRITE_RATIO 500 //Warning write ratio is given out of a 1000, e.g 10 means 10/1000 i.e. 1%
+#define WRITE_RATIO 1000 //Warning write ratio is given out of a 1000, e.g 10 means 10/1000 i.e. 1%
 #define SC_RATIO 500// this is out of 1000, e.g. 10 means 1%
 #define ENABLE_RELEASES (1 && COMPILED_SYSTEM == kite_sys)
 #define ENABLE_ACQUIRES (1 && COMPILED_SYSTEM == kite_sys)
