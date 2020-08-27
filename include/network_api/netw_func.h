@@ -245,7 +245,7 @@ static inline void ctx_poll_incoming_messages(context_t *ctx, uint16_t qp_id)
 //------------------------------ ACKS --------------------------------
 //---------------------------------------------------------------------------*/
 
-static inline uint32_t ctx_find_when_the_ack_points_acked(ack_mes_t *ack,
+static inline uint32_t ctx_find_when_the_ack_points_acked(ctx_ack_mes_t *ack,
                                                           fifo_t *rob,
                                                           uint64_t pull_lid,
                                                           uint32_t *ack_num)
@@ -263,7 +263,7 @@ static inline uint32_t ctx_find_when_the_ack_points_acked(ack_mes_t *ack,
 ///
 static inline void ctx_increase_credits_on_polling_ack(context_t *ctx,
                                                        uint16_t qp_id,
-                                                       ack_mes_t *ack)
+                                                       ctx_ack_mes_t *ack)
 {
   per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_id];
   ctx->qp_meta[qp_meta->recv_qp_id].credits[ack->m_id] += ack->credits;
@@ -283,8 +283,8 @@ static inline bool ctx_ack_insert(context_t *ctx,
                                   const uint8_t m_id)
 {
   per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_id];
-  ack_mes_t *acks = (ack_mes_t *) qp_meta->send_fifo->fifo;
-  ack_mes_t *ack = &acks[m_id];
+  ctx_ack_mes_t *acks = (ctx_ack_mes_t *) qp_meta->send_fifo->fifo;
+  ctx_ack_mes_t *ack = &acks[m_id];
   if (ENABLE_ASSERTIONS && ack->opcode != OP_ACK) {
     if(unlikely(ack->l_id) + ack->ack_num != l_id) {
       my_printf(red, "Wrkr %u: Adding to existing ack for machine %u  with l_id %lu, "
@@ -325,7 +325,7 @@ static inline void ctx_send_acks(context_t *ctx, uint16_t qp_id)
   per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_id];
   per_qp_meta_t *recv_qp_meta = &ctx->qp_meta[qp_meta->recv_qp_id];
   //p_ops_t *p_ops = (p_ops_t *) ctx->appl_ctx;
-  ack_mes_t *acks = (ack_mes_t *) qp_meta->send_fifo->fifo;
+  ctx_ack_mes_t *acks = (ctx_ack_mes_t *) qp_meta->send_fifo->fifo;
   uint8_t ack_i = 0, prev_ack_i = 0, first_wr = 0;
   struct ibv_send_wr *bad_send_wr;
   uint32_t recvs_to_post_num = 0;
@@ -364,6 +364,28 @@ static inline void ctx_send_acks(context_t *ctx, uint16_t qp_id)
 }
 
 
+/* ---------------------------------------------------------------------------
+//------------------------------ Commits --------------------------------
+//---------------------------------------------------------------------------*/
 
+static inline void ctx_insert_commit(context_t *ctx,
+                                     uint16_t qp_id,
+                                     uint16_t com_num,
+                                     uint64_t last_committed_id)
+{
+  fifo_t *send_fifo = ctx->qp_meta[qp_id].send_fifo;
+  ctx_com_mes_t *commit = (ctx_com_mes_t *) get_fifo_push_prev_slot(send_fifo);
+
+  if (send_fifo->capacity > 0)
+    commit->com_num += com_num;
+  else { //otherwise push a new commit
+    commit->l_id = last_committed_id;
+    commit->com_num = com_num;
+    fifo_incr_capacity(send_fifo);
+  }
+  send_fifo->net_capacity += com_num;
+  slot_meta_t *slot_meta = get_fifo_slot_meta_push(send_fifo);
+  slot_meta->coalesce_num += com_num;
+}
 
 #endif //ODYSSEY_NETW_FUNC_H

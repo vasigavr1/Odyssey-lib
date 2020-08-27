@@ -21,22 +21,41 @@ typedef void (*recv_kvs_t)(context_t *);
 typedef void (*polling_debug_t)(context_t *, uint16_t, int);
 
 
-#define ACK_SIZE (16)
-#define ACK_RECV_SIZE (GRH_SIZE + (ACK_SIZE))
+#define CTX_ACK_SIZE (16)
+#define CTX_ACK_RECV_SIZE (GRH_SIZE + (CTX_ACK_SIZE))
 // The format of an ack message
-typedef struct ack_message {
+typedef struct ctx_ack_message {
   uint64_t l_id; // the first local id that is being acked
   uint32_t ack_num;
   uint16_t credits;
   uint8_t m_id;
   uint8_t opcode;
-} __attribute__((__packed__)) ack_mes_t;
+} __attribute__((__packed__)) ctx_ack_mes_t;
 
 
-typedef struct ack_message_ud_req {
+typedef struct ctx_ack_message_ud_req {
   uint8_t grh[GRH_SIZE];
-  ack_mes_t ack;
-} ack_mes_ud_t;
+  ctx_ack_mes_t ack;
+} ctx_ack_mes_ud_t;
+
+
+#define CTX_COM_SEND_SIZE (13)
+#define CTX_COM_RECV_SIZE (GRH_SIZE + CTX_COM_SEND_SIZE)
+
+// The format of a commit message
+typedef struct ctx_com_message {
+  uint64_t l_id;
+  uint32_t com_num;
+  uint8_t opcode;
+  uint8_t unused[3];
+} __attribute__((__packed__)) ctx_com_mes_t;
+
+// commit message plus the grh
+typedef struct ctx_com_message_ud_req {
+  uint8_t grh[GRH_SIZE];
+  ctx_com_mes_t com;
+} ctx_com_mes_ud_t;
+
 
 typedef enum{
   SEND_ACK_RECV_ACK,
@@ -392,9 +411,9 @@ static void crate_ack_qp_meta(per_qp_meta_t* qp_meta,
   //qp_meta->leader_m_id = leader_m_id;
 
   qp_meta->recv_buf_slot_num = qp_meta->recv_wr_num;
-  qp_meta->recv_buf_size = qp_meta->recv_buf_slot_num * sizeof(ack_mes_ud_t);
-  qp_meta->recv_size = sizeof(struct ack_message_ud_req);
-  qp_meta->send_size = sizeof(ack_mes_t);
+  qp_meta->recv_buf_size = qp_meta->recv_buf_slot_num * sizeof(ctx_ack_mes_ud_t);
+  qp_meta->recv_size = sizeof(struct ctx_ack_message_ud_req);
+  qp_meta->send_size = sizeof(ctx_ack_mes_t);
   qp_meta->mcast_send = false;
   qp_meta->mcast_recv = false;
   qp_meta->completed_but_not_polled = 0;
@@ -404,7 +423,7 @@ static void crate_ack_qp_meta(per_qp_meta_t* qp_meta,
   qp_meta_ss_batch_q_depth(qp_meta);
 
   qp_meta->enable_inlining = true;
-  assert(sizeof(ack_mes_t) <= MAXIMUM_INLINE_SIZE);
+  assert(sizeof(ctx_ack_mes_t) <= MAXIMUM_INLINE_SIZE);
   qp_meta->has_recv_fifo = true;
   qp_meta->recv_fifo = calloc(1, sizeof(fifo_t));
   qp_meta->recv_fifo->fifo = NULL; // will be filled after initializing the hrd_cb
@@ -417,7 +436,7 @@ static void crate_ack_qp_meta(per_qp_meta_t* qp_meta,
                                         qp_meta->send_size, false, 0, 1);
 
   allocate_work_requests(qp_meta);
-  ack_mes_t *ack_send_buf = (ack_mes_t *) qp_meta->send_fifo->fifo;
+  ctx_ack_mes_t *ack_send_buf = (ctx_ack_mes_t *) qp_meta->send_fifo->fifo;
   for (int m_i = 0; m_i <= receipient_num; m_i++) {
     qp_meta->send_sgl[m_i].addr =
       (uintptr_t) &ack_send_buf[m_i];
