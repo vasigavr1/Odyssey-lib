@@ -9,6 +9,16 @@
 #include <rdma_gen_util.h>
 #include "network_context.h"
 
+
+static inline void ctx_refill_recvs(context_t *ctx,
+                                    uint16_t qp_id)
+{
+  per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_id];
+  if (qp_meta->recv_wr_num > qp_meta->recv_info->posted_recvs)
+    post_recvs_with_recv_info(qp_meta->recv_info,
+                              qp_meta->recv_wr_num - qp_meta->recv_info->posted_recvs);
+}
+
 /* ---------------------------------------------------------------------------
 //------------------------------ INSERT --------------------------------
 //---------------------------------------------------------------------------*/

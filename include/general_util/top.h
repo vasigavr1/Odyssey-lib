@@ -98,7 +98,7 @@ typedef struct key mica_key_t;
 #define KVS_SOCKET 0// (WORKERS_PER_MACHINE < 30 ? 0 : 1 )// socket where the cache is bind
 
 // CORE CONFIGURATION
-#define WORKERS_PER_MACHINE 10
+#define WORKERS_PER_MACHINE 5
 #define MACHINE_NUM 5
 #define SESSIONS_PER_THREAD 50
 #define ENABLE_CLIENTS 0
@@ -259,7 +259,7 @@ enum {
 	-----------------MULTICAST-------------------------
 --------------------------------------------------*/
 // Multicast defines are not used, but are kept them for possible extension
-#define ENABLE_MULTICAST_ 0
+#define ENABLE_MULTICAST_ 1
 #define ENABLE_MULTICAST ENABLE_MULTICAST_
 #define MULTICAST_TESTING_ 0
 #define MULTICAST_TESTING (ENABLE_MULTICAST == 1 ? MULTICAST_TESTING_ : 0)

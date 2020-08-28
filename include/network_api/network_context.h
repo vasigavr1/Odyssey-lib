@@ -39,7 +39,7 @@ typedef struct ctx_ack_message_ud_req {
 } ctx_ack_mes_ud_t;
 
 
-#define CTX_COM_SEND_SIZE (13)
+#define CTX_COM_SEND_SIZE (16)
 #define CTX_COM_RECV_SIZE (GRH_SIZE + CTX_COM_SEND_SIZE)
 
 // The format of a commit message
@@ -47,7 +47,8 @@ typedef struct ctx_com_message {
   uint64_t l_id;
   uint32_t com_num;
   uint8_t opcode;
-  uint8_t unused[3];
+  uint8_t m_id;
+  uint8_t unused[2];
 } __attribute__((__packed__)) ctx_com_mes_t;
 
 // commit message plus the grh

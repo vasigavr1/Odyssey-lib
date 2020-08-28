@@ -16,7 +16,7 @@
 #endif
 
 #ifdef DERECHO
-	#include "../../../zookeeper/include/derecho/dr_config.h"
+	#include "dr_config.h"
 #endif
 
 #ifdef ZOOKEEPER
