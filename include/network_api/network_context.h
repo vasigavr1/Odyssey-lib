@@ -392,6 +392,7 @@ static void create_per_qp_meta(per_qp_meta_t* qp_meta,
   }
   else qp_meta->has_send_fifo = false;
   allocate_work_requests(qp_meta);
+  if (qp_meta->mfs == NULL) qp_meta->mfs = malloc(sizeof(mf_t));
 }
 
 
@@ -442,7 +443,7 @@ static void crate_ack_qp_meta(per_qp_meta_t* qp_meta,
     qp_meta->send_sgl[m_i].addr =
       (uintptr_t) &ack_send_buf[m_i];
   }
-
+  if (qp_meta->mfs == NULL) qp_meta->mfs = malloc(sizeof(mf_t));
 }
 
 // Set up the receive info
@@ -828,7 +829,7 @@ static void ctx_set_qp_meta_mfs(context_t *ctx,
 {
   for (int qp_i = 0; qp_i < ctx->qp_num; ++qp_i) {
     per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_i];
-    qp_meta->mfs = malloc(sizeof(mf_t));
+    if (qp_meta->mfs == NULL) qp_meta->mfs = malloc(sizeof(mf_t));
     memcpy(qp_meta->mfs, &mf[qp_i], sizeof(mf_t));
   }
 

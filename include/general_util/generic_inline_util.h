@@ -101,6 +101,13 @@ static inline void my_assert(bool cond, const char *message)
 
 
 
+static inline void emphatic_print(color_t color, const char *text)
+{
+  my_printf(color, "---------------------------------------------------------- \n");
+  my_printf(color, "------------------------%s------------------------- \n", text);
+  my_printf(color, "---------------------------------------------------------- \n");
+}
+
 // swap 2 pointerss
 static inline void swap_pointers(void** ptr_1, void** ptr_2)
 {
