@@ -37,7 +37,7 @@ void *worker(void *arg)
   uint16_t t_id = (uint16_t) params.id;
 
   if (t_id == 0) {
-    my_printf(yellow, "Worker-id %d \n",
+    my_printf(yellow, "Machine-id %d \n",
               machine_id);
     if (ENABLE_MULTICAST) my_printf(cyan, "MULTICAST IS ENABLED \n");
   }

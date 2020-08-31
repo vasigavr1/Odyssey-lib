@@ -358,6 +358,10 @@ static inline void ctx_send_acks(context_t *ctx, uint16_t qp_id)
     ack_i++;
     prev_ack_i = m_i;
   }
+
+  if (ack_i > 0 && qp_meta->mfs->send_helper != NULL)
+    qp_meta->mfs->send_helper(ctx);
+
   //Post receives
   if (recvs_to_post_num > 0) {
     post_recvs_with_recv_info(recv_qp_meta->recv_info, recvs_to_post_num);

@@ -852,13 +852,13 @@ static void set_up_ctx(context_t *ctx)
   if (ENABLE_ASSERTIONS && ctx->t_id == 0) printf("total size %u \n ", ctx->total_recv_buf_size);
   hrd_ctrl_blk_t *cb =
     hrd_ctrl_blk_init(ctx->t_id,	/* local_hid */
-                                   0, -1, /* port_index, numa_node_id */
-                                   0, 0,	/* #conn qps, uc */
-                                   NULL, 0, -1,	/* prealloc conn recv_buf, recv_buf capacity, key */
-                                   ctx->qp_num, ctx->total_recv_buf_size,	/* num_dgram_qps, dgram_buf_size */
-                                   MASTER_SHM_KEY + ctx->t_id, /* key */
-                                   get_recv_q_depths(ctx->qp_meta, ctx->qp_num),
-                                   get_send_q_depths(ctx->qp_meta, ctx->qp_num)); /* Depth of the dgram RECV Q*/
+                      0, -1, /* port_index, numa_node_id */
+                      0, 0,	/* #conn qps, uc */
+                      NULL, 0, -1,	/* prealloc conn recv_buf, recv_buf capacity, key */
+                      ctx->qp_num, ctx->total_recv_buf_size,	/* num_dgram_qps, dgram_buf_size */
+                      MASTER_SHM_KEY + ctx->t_id, /* key */
+                      get_recv_q_depths(ctx->qp_meta, ctx->qp_num),
+                      get_send_q_depths(ctx->qp_meta, ctx->qp_num)); /* Depth of the dgram RECV Q*/
 
   ctx->cb = cb;
   ctx->recv_buffer = (void*) cb->dgram_buf;

@@ -100,7 +100,7 @@ typedef struct key mica_key_t;
 // CORE CONFIGURATION
 #define WORKERS_PER_MACHINE 5
 #define MACHINE_NUM 5
-#define SESSIONS_PER_THREAD 50
+#define SESSIONS_PER_THREAD 25
 #define ENABLE_CLIENTS 0
 #define CLIENTS_PER_MACHINE_ 5
 #define CLIENTS_PER_MACHINE (ENABLE_CLIENTS ? CLIENTS_PER_MACHINE_ : 0)
@@ -259,7 +259,7 @@ enum {
 	-----------------MULTICAST-------------------------
 --------------------------------------------------*/
 // Multicast defines are not used, but are kept them for possible extension
-#define ENABLE_MULTICAST_ 1
+#define ENABLE_MULTICAST_ 0
 #define ENABLE_MULTICAST ENABLE_MULTICAST_
 #define MULTICAST_TESTING_ 0
 #define MULTICAST_TESTING (ENABLE_MULTICAST == 1 ? MULTICAST_TESTING_ : 0)
