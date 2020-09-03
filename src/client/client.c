@@ -20,6 +20,7 @@ static inline uint32_t send_reqs_from_trace(trace_t *trace, uint16_t t_id)
   const uint16_t worker_num = (uint16_t)(WORKERS_PER_MACHINE / CLIENTS_PER_MACHINE_);
   uint16_t first_worker = worker_num * t_id;
   uint16_t last_worker = (uint16_t) (first_worker + worker_num - 1);
+  //TODO fix this so that we can use as many clients as we want
   uint32_t dbg_cntr = 0;
   uint32_t trace_ptr = 0;
   uint8_t* value = (uint8_t *) calloc((size_t) VALUE_SIZE, 1);
@@ -62,9 +63,9 @@ static inline uint32_t send_reqs_from_trace(trace_t *trace, uint16_t t_id)
                           t_id, wrkr, s_i, push_ptr, trace_ptr, &interface[wrkr].req_array[s_i][push_ptr].state);
           interface[wrkr].req_array[s_i][push_ptr].opcode = trace[trace_ptr].opcode;
           memcpy(&interface[wrkr].req_array[s_i][push_ptr].key, trace[trace_ptr].key_hash, KEY_SIZE);
-          interface[wrkr].req_array[s_i][push_ptr].val_len = (uint32_t) VALUE_SIZE;
-          interface[wrkr].req_array[s_i][push_ptr].value_to_read = value;
-          interface[wrkr].req_array[s_i][push_ptr].rmw_is_successful = cas_result;
+          interface[wrkr].req_array[s_i][push_ptr].val_len = (uint32_t) VALUE_SIZE; // TODO
+          interface[wrkr].req_array[s_i][push_ptr].value_to_read = value; //TODO
+          interface[wrkr].req_array[s_i][push_ptr].rmw_is_successful = cas_result; // TODO
           atomic_store_explicit(&interface[wrkr].req_array[s_i][push_ptr].state, (uint8_t) ACTIVE_REQ,
                                 memory_order_release);
           MOD_INCR(interface[wrkr].clt_push_ptr[s_i], PER_SESSION_REQ_NUM);

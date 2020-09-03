@@ -98,15 +98,15 @@ typedef struct key mica_key_t;
 #define KVS_SOCKET 0// (WORKERS_PER_MACHINE < 30 ? 0 : 1 )// socket where the cache is bind
 
 // CORE CONFIGURATION
-#define WORKERS_PER_MACHINE 30
+#define WORKERS_PER_MACHINE 1
 #define MACHINE_NUM 5
-#define SESSIONS_PER_THREAD 50
-#define ENABLE_CLIENTS 0
-#define CLIENTS_PER_MACHINE_ 5
+#define SESSIONS_PER_THREAD 40
+#define ENABLE_CLIENTS 1
+#define CLIENTS_PER_MACHINE_ 1
 #define CLIENTS_PER_MACHINE (ENABLE_CLIENTS ? CLIENTS_PER_MACHINE_ : 0)
 #define ENABLE_LOCK_FREE_READING 1
 
-#define ENABLE_ASSERTIONS 0
+#define ENABLE_ASSERTIONS 1
 
 #define PUT_A_MACHINE_TO_SLEEP 0
 #define MACHINE_THAT_SLEEPS 1
@@ -224,7 +224,7 @@ enum {
   PRODUCER_CONSUMER
 };
 
-#define CLIENT_MODE TREIBER_ASYNC
+#define CLIENT_MODE CLIENT_USE_TRACE
 
 #define TREIBER_WRITES_NUM 1
 #define TREIBER_NO_CONFLICTS 0
@@ -243,7 +243,7 @@ enum {
 #define PC_WRITES_NUM 5
 #define PC_IDEAL 0
 
-#define PER_SESSION_REQ_NUM (MS_WRITES_NUM + 4) //(HM_WRITES_NUM + 15) //(TREIBER_WRITES_NUM + 3) //   (HM_WRITES_NUM + 15) //   ((2 * PC_WRITES_NUM) + 5)
+#define PER_SESSION_REQ_NUM 10 //(MS_WRITES_NUM + 4) //(HM_WRITES_NUM + 15) //(TREIBER_WRITES_NUM + 3) //   (HM_WRITES_NUM + 15) //   ((2 * PC_WRITES_NUM) + 5)
 #define CLIENT_DEBUG 0
 
 
@@ -259,7 +259,7 @@ enum {
 	-----------------MULTICAST-------------------------
 --------------------------------------------------*/
 // Multicast defines are not used, but are kept them for possible extension
-#define ENABLE_MULTICAST_ 1
+#define ENABLE_MULTICAST_ 0
 #define ENABLE_MULTICAST ENABLE_MULTICAST_
 #define MULTICAST_TESTING_ 0
 #define MULTICAST_TESTING (ENABLE_MULTICAST == 1 ? MULTICAST_TESTING_ : 0)

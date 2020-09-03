@@ -16,6 +16,8 @@
 #include <netdb.h>
 #include <stdbool.h>
 #include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 // This helps us set up the necessary rdma_cm_ids for the multicast groups
 struct cm_qps
