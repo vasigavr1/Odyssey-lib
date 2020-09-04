@@ -35,7 +35,7 @@
 #include <stdbool.h>
 
 
-enum {error_sys, kite_sys = 141, zookeeper_sys = 142, derecho_sys};
+typedef enum {error_sys, kite_sys = 141, zookeeper_sys = 142, derecho_sys} system_t;
 
 //#define COMPILED_SYSTEM zookeeper_sys
 
@@ -98,30 +98,30 @@ typedef struct key mica_key_t;
 #define KVS_SOCKET 0// (WORKERS_PER_MACHINE < 30 ? 0 : 1 )// socket where the cache is bind
 
 // CORE CONFIGURATION
-#define WORKERS_PER_MACHINE 1
+#define WORKERS_PER_MACHINE 20
 #define MACHINE_NUM 5
 #define SESSIONS_PER_THREAD 40
 #define ENABLE_CLIENTS 1
-#define CLIENTS_PER_MACHINE_ 1
+#define CLIENTS_PER_MACHINE_ 4
 #define CLIENTS_PER_MACHINE (ENABLE_CLIENTS ? CLIENTS_PER_MACHINE_ : 0)
 #define ENABLE_LOCK_FREE_READING 1
 
-#define ENABLE_ASSERTIONS 1
+#define ENABLE_ASSERTIONS 0
 
 #define PUT_A_MACHINE_TO_SLEEP 0
 #define MACHINE_THAT_SLEEPS 1
 
-#define MEASURE_LATENCY 0
+#define MEASURE_LATENCY 1
 #define LATENCY_MACHINE 0
-#define LATENCY_THREAD 15
+#define LATENCY_THREAD 0
 #define MEASURE_READ_LATENCY 2 // 2 means mixed
 #define ENABLE_STAT_COUNTING 1
 
 #define CREDIT_TIMEOUT  M_16 // B_4_EXACT //
 
 // PRINTS -- STATS
-#define EXIT_ON_PRINT 0
-#define PRINT_NUM 4
+#define EXIT_ON_PRINT 1
+#define PRINT_NUM 1
 #define ENABLE_MS_MEASUREMENTS 0 // finer granularity measurements
 #define SHOW_STATS_LATENCY_STYLE 1
 
@@ -147,8 +147,8 @@ typedef struct key mica_key_t;
 #define ALL_RMWS_SINGLE_KEY 0 //  all threads do only rmws to one key (0)
 #define RMW_ONE_KEY_PER_THREAD 0 // thread t_id rmws key t_id
 //#define RMW_ONE_KEY_PER_SESSION 1 // session id rmws key t_id
-#define TRACE_ONLY_CAS 0
-#define TRACE_ONLY_FA 1
+#define TRACE_ONLY_CAS 1
+#define TRACE_ONLY_FA 0
 #define TRACE_MIXED_RMWS 0
 #define TRACE_CAS_RATIO 500 // out of a 1000
 #define RMW_CAS_CANCEL_RATIO 400 // out of 1000
@@ -196,6 +196,7 @@ typedef struct key mica_key_t;
 #define ENABLE_DEBUG_RMW_KV_PTR 0
 #define DEBUG_SEQLOCKS 0
 #define DEBUG_GID 0
+#define DEBUG_LATENCY 0
 
 
 /* Request sizes */
@@ -243,7 +244,7 @@ enum {
 #define PC_WRITES_NUM 5
 #define PC_IDEAL 0
 
-#define PER_SESSION_REQ_NUM 10 //(MS_WRITES_NUM + 4) //(HM_WRITES_NUM + 15) //(TREIBER_WRITES_NUM + 3) //   (HM_WRITES_NUM + 15) //   ((2 * PC_WRITES_NUM) + 5)
+#define PER_SESSION_REQ_NUM 15 //(MS_WRITES_NUM + 4) //(HM_WRITES_NUM + 15) //(TREIBER_WRITES_NUM + 3) //   (HM_WRITES_NUM + 15) //   ((2 * PC_WRITES_NUM) + 5)
 #define CLIENT_DEBUG 0
 
 

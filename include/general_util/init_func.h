@@ -36,6 +36,7 @@ static void generic_static_assert_compile_parameters()
     assert(!same_cl);
     assert(is_interface_aligned);
   }
+  static_assert((MEASURE_LATENCY && PRINT_NUM) || (!MEASURE_LATENCY), "");
 }
 
 static void handle_program_inputs(int argc, char *argv[])
@@ -144,17 +145,15 @@ static void generic_init_globals(int qp_num)
   }
 
   /* Latency Measurements initializations */
-#if MEASURE_LATENCY == 1
-  memset(&latency_count, 0, sizeof(struct latency_counters));
-	latency_count.hot_writes  = (uint32_t*) malloc(sizeof(uint32_t) * (LATENCY_BUCKETS + 1)); // the last latency bucket is to capture possible outliers (> than LATENCY_MAX)
-  memset(latency_count.hot_writes, 0, sizeof(uint32_t) * (LATENCY_BUCKETS + 1));
-	latency_count.hot_reads   = (uint32_t*) malloc(sizeof(uint32_t) * (LATENCY_BUCKETS + 1)); // the last latency bucket is to capture possible outliers (> than LATENCY_MAX)
-  memset(latency_count.hot_reads, 0, sizeof(uint32_t) * (LATENCY_BUCKETS + 1));
-	latency_count.releases  = (uint32_t*) malloc(sizeof(uint32_t) * (LATENCY_BUCKETS + 1)); // the last latency bucket is to capture possible outliers (> than LATENCY_MAX)
-  memset(latency_count.releases, 0, sizeof(uint32_t) * (LATENCY_BUCKETS + 1));
-	latency_count.acquires = (uint32_t*) malloc(sizeof(uint32_t) * (LATENCY_BUCKETS + 1)); // the last latency bucket is to capture possible outliers (> than LATENCY_MAX)
-  memset(latency_count.acquires, 0, sizeof(uint32_t) * (LATENCY_BUCKETS + 1));
-#endif
+  if (MEASURE_LATENCY) {
+    // the last latency bucket is to capture possible outliers (> than LATENCY_MAX)
+    memset(&latency_count, 0, sizeof(struct latency_counters));
+    latency_count.writes = (uint32_t *) calloc(sizeof(uint32_t),  (LATENCY_BUCKETS + 1));
+    latency_count.reads = (uint32_t *) calloc(sizeof(uint32_t),  (LATENCY_BUCKETS + 1));
+    latency_count.releases = (uint32_t *) calloc(sizeof(uint32_t),  (LATENCY_BUCKETS + 1));
+    latency_count.acquires = (uint32_t *) calloc(sizeof(uint32_t),  (LATENCY_BUCKETS + 1));
+    latency_count.rmws = (uint32_t *) calloc(sizeof(uint32_t),  (LATENCY_BUCKETS + 1));
+  }
 }
 
 // pin threads starting from core 0

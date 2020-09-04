@@ -125,6 +125,42 @@ static inline void circulate_pointers(void** ptr_1, void** ptr_2, void** ptr_3)
   *ptr_3 = tmp;
 }
 
+
+static inline char* opcode_to_str(uint8_t opcode)
+{
+  //const char *ret_str;
+  switch(opcode) {
+    case PROPOSE_OP: return "PROPOSE_OP";
+    case COMMIT_OP: return "COMMIT_OP";
+    case ACCEPT_OP: return "ACCEPT_OP";
+    case ACCEPT_OP_BIT_VECTOR: return "ACCEPT_OP_BIT_VECTOR";
+    case ACCEPT_OP_NO_CREDITS: return "ACCEPT_OP_NO_CREDITS";
+    case OP_RELEASE: return "OP_RELEASE";
+    case OP_ACQUIRE: return "OP_ACQUIRE";
+    case KVS_OP_GET: return "KVS_OP_GET";
+    case KVS_OP_PUT: return "KVS_OP_PUT";
+    case FETCH_AND_ADD: return "FETCH_AND_ADD";
+    case COMPARE_AND_SWAP_WEAK: return "COMPARE_AND_SWAP_WEAK";
+    case COMPARE_AND_SWAP_STRONG: return "COMPARE_AND_SWAP_STRONG";
+    default: assert(false);
+      //ret_str = malloc(20);
+      //sprintf(ret_str, "%u", opcode);
+      //return ret_str;
+  }
+}
+
+static inline char *system_name()
+{
+  system_t sys = COMPILED_SYSTEM;
+  switch (sys) {
+    case error_sys: return "error_sys";
+    case kite_sys: return "kite_sys";
+    case zookeeper_sys: return "zookeeper_sys";
+    case derecho_sys: return "derecho_sys";
+    default: assert(false);
+  }
+}
+
 /*----------------------------------------------------
  * ---------------KEYS----------------------------
  * ----------------------------------------------------*/

@@ -15,6 +15,7 @@ typedef enum {
   ACQUIRE,
   WRITE_REQ,
   READ_REQ,
+  RMW_REQ,
   WRITE_REQ_BEFORE_CACHE
 } req_type;
 

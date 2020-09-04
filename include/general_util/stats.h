@@ -51,9 +51,10 @@ typedef struct latency_flags {
 struct latency_counters{
   uint32_t* acquires;
   uint32_t* releases;
-  uint32_t* hot_reads;
-  uint32_t* hot_writes;
-  long long total_measurements;
+  uint32_t* reads;
+  uint32_t* writes;
+  uint32_t* rmws;
+  uint64_t total_measurements;
   uint32_t max_acq_lat;
   uint32_t max_rel_lat;
   uint32_t max_read_lat;

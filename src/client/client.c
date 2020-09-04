@@ -2,47 +2,118 @@
 // Created by vasilis on 05/02/19.
 //
 
+#include <latency_util.h>
 #include "interface.h"
 #include "trace_util.h"
 #include "kvs.h"
 
 
-#define CLIENT_ASSERTIONS 1
+#define CLIENT_ASSERTIONS 0
 #define NUM_OF_RMW_KEYS 50000
 
 /* --------------------------------------------------------------------------------------
  * ----------------------------------TRACE-----------------------------------------------
  * --------------------------------------------------------------------------------------*/
+typedef struct clt_trace_t {
+  uint16_t t_id;
+  uint8_t m_id;
+  uint16_t sess_offset;
+  uint16_t min_sess;
+  uint16_t min_wrkr;
+  uint16_t max_sess;
+  uint16_t max_wrkr;
+  uint16_t worker_num;
+  latency_info_t *lat_info;
+  bool measuring_latency;
+} trace_info_t;
+
+static inline trace_info_t*  init_clt_trace(uint16_t t_id)
+{
+  trace_info_t* tr_info = calloc(1, sizeof(trace_info_t));
+  tr_info->t_id = t_id;
+  tr_info->m_id = (uint8_t) machine_id;
+  tr_info->sess_offset = (uint16_t) (t_id * SESSIONS_PER_CLIENT);
+  assert(sess_offset + SESSIONS_PER_CLIENT <= SESSIONS_PER_MACHINE);
+  tr_info->min_sess = tr_info->sess_offset;
+  tr_info->max_sess = (uint16_t) (tr_info->sess_offset + (SESSIONS_PER_CLIENT -1));
+  tr_info->min_wrkr = (uint16_t) (tr_info->min_sess / SESSIONS_PER_THREAD);
+  tr_info->max_wrkr = (uint16_t) (tr_info->max_sess / SESSIONS_PER_THREAD);
+  tr_info->worker_num = tr_info->max_wrkr - tr_info->min_wrkr;
+
+  tr_info->measuring_latency = tr_info->m_id == LATENCY_MACHINE &&
+                               tr_info->t_id == LATENCY_THREAD;
+  if (tr_info->measuring_latency) {
+    tr_info->lat_info = calloc(1, sizeof(latency_info_t));
+    tr_info->lat_info->measured_req_flag = NO_REQ;
+  }
+  else tr_info->lat_info = NULL;
+
+  if (CLIENT_ASSERTIONS && tr_info->m_id == 0)
+    my_printf(cyan, "Client %u feeds Session %u -->%u \n "
+              "Workers %u --> %u\n "
+              "Sizeof client op %u \n",
+              t_id, tr_info->min_sess, tr_info->max_sess,
+              tr_info->min_wrkr, tr_info->max_wrkr, sizeof(client_op_t));
+  client_op_t *tmp_clt_op = calloc(tr_info->worker_num, sizeof(tmp_clt_op));
+
+  for (int session_id = tr_info->min_sess; session_id <= tr_info->max_sess; ++session_id) {
+    uint16_t wrkr = (uint16_t) (session_id / SESSIONS_PER_THREAD);
+    uint16_t s_i = (uint16_t) (session_id % SESSIONS_PER_THREAD);
+    for (int req_i = 0; req_i < PER_SESSION_REQ_NUM; ++req_i) {
+      interface[wrkr].req_array[s_i][req_i].val_len = (uint32_t) VALUE_SIZE;
+      interface[wrkr].req_array[s_i][req_i].value_to_read = tmp_clt_op[wrkr].value_to_write;
+      interface[wrkr].req_array[s_i][req_i].rmw_is_successful = (bool *) &tmp_clt_op[wrkr].opcode;
+    }
+  }
+  return tr_info;
+}
+
+
+static inline void clt_start_latency_mes(trace_info_t* tr_info,
+                                         uint32_t sess_id, uint8_t opcode)
+{
+  if ((!MEASURE_LATENCY) ||
+      (!tr_info->measuring_latency) ||
+      (tr_info->lat_info->measured_req_flag != NO_REQ)) return;
+
+  start_measurement(tr_info->lat_info, sess_id, opcode, tr_info->t_id);
+
+}
+
+static inline void clt_stop_latency_mes(trace_info_t* tr_info,
+                                        uint32_t sess_id)
+{
+  if ((!MEASURE_LATENCY) ||
+      (!tr_info->measuring_latency) ||
+      (tr_info->lat_info->measured_req_flag == NO_REQ)) return;
+
+  if (tr_info->lat_info->measured_sess_id == sess_id)
+    report_latency(tr_info->lat_info);
+}
 
 // Use a trace - can be either manufactured or from text
 static inline uint32_t send_reqs_from_trace(trace_t *trace, uint16_t t_id)
 {
-  const uint16_t worker_num = (uint16_t)(WORKERS_PER_MACHINE / CLIENTS_PER_MACHINE_);
-  uint16_t first_worker = worker_num * t_id;
-  uint16_t last_worker = (uint16_t) (first_worker + worker_num - 1);
-  //TODO fix this so that we can use as many clients as we want
+  trace_info_t* tr_info = init_clt_trace(t_id);
   uint32_t dbg_cntr = 0;
   uint32_t trace_ptr = 0;
-  uint8_t* value = (uint8_t *) calloc((size_t) VALUE_SIZE, 1);
-  bool *cas_result = (bool*) calloc(1, sizeof(bool));
+
   while (true) {
-    uint16_t w_i = 0, s_i = 0;
     bool polled = false;
-    // poll requests
-    for (w_i = 0; w_i < worker_num; w_i++) {
-      uint16_t wrkr = w_i + first_worker;
-      for (s_i = 0; s_i < SESSIONS_PER_THREAD; s_i++) {
-        uint16_t pull_ptr = interface[wrkr].clt_pull_ptr[s_i];
-        //printf("Client %u  wrkr %u s_i %u, w_pull_ptr %u \n", t_id, wrkr, s_i, w_pull_ptr);
-        while (interface[wrkr].req_array[s_i][pull_ptr].state == COMPLETED_REQ) {
-          // get the result
-          polled = true;
-          if (CLIENT_DEBUG)
-            my_printf(green, "Client %u pulling req from worker %u for session %u, slot %u\n",
-                         t_id, wrkr, s_i, pull_ptr);
-          atomic_store_explicit(&interface[wrkr].req_array[s_i][pull_ptr].state, INVALID_REQ, memory_order_relaxed);
-          MOD_INCR(interface[wrkr].clt_pull_ptr[s_i], PER_SESSION_REQ_NUM);
-        }
+    for (uint32_t session_id = tr_info->min_sess; session_id <= tr_info->max_sess; ++session_id) {
+      uint16_t wrkr = (uint16_t) (session_id / SESSIONS_PER_THREAD);
+      uint16_t s_i = (uint16_t) (session_id % SESSIONS_PER_THREAD);
+      uint16_t pull_ptr = interface[wrkr].clt_pull_ptr[s_i];
+      //printf("Client %u  wrkr %u s_i %u, w_pull_ptr %u \n", t_id, wrkr, s_i, w_pull_ptr);
+      while (interface[wrkr].req_array[s_i][pull_ptr].state == COMPLETED_REQ) {
+        // get the result
+        polled = true;
+        if (CLIENT_DEBUG)
+          my_printf(green, "Client %u pulling req from worker %u for session %u, slot %u\n",
+                       t_id, wrkr, s_i, pull_ptr);
+        clt_stop_latency_mes(tr_info, session_id);
+        atomic_store_explicit(&interface[wrkr].req_array[s_i][pull_ptr].state, INVALID_REQ, memory_order_relaxed);
+        MOD_INCR(interface[wrkr].clt_pull_ptr[s_i], PER_SESSION_REQ_NUM);
       }
     }
     if (!polled) dbg_cntr++;
@@ -53,25 +124,27 @@ static inline uint32_t send_reqs_from_trace(trace_t *trace, uint16_t t_id)
       dbg_cntr = 0;
     }
     // issue requests
-    for (w_i = 0; w_i < worker_num; w_i++) {
-      uint16_t wrkr = w_i + first_worker;
-      for (s_i = 0; s_i < SESSIONS_PER_THREAD; s_i++) {
-        uint16_t push_ptr = interface[wrkr].clt_push_ptr[s_i];
-        while (interface[wrkr].req_array[s_i][push_ptr].state == INVALID_REQ) {
-          if (CLIENT_DEBUG)
-            my_printf(yellow, "Client %u inserting req to worker %u for session %u, in slot %u from trace slot %u ptr %p\n",
-                          t_id, wrkr, s_i, push_ptr, trace_ptr, &interface[wrkr].req_array[s_i][push_ptr].state);
-          interface[wrkr].req_array[s_i][push_ptr].opcode = trace[trace_ptr].opcode;
-          memcpy(&interface[wrkr].req_array[s_i][push_ptr].key, trace[trace_ptr].key_hash, KEY_SIZE);
-          interface[wrkr].req_array[s_i][push_ptr].val_len = (uint32_t) VALUE_SIZE; // TODO
-          interface[wrkr].req_array[s_i][push_ptr].value_to_read = value; //TODO
-          interface[wrkr].req_array[s_i][push_ptr].rmw_is_successful = cas_result; // TODO
-          atomic_store_explicit(&interface[wrkr].req_array[s_i][push_ptr].state, (uint8_t) ACTIVE_REQ,
-                                memory_order_release);
-          MOD_INCR(interface[wrkr].clt_push_ptr[s_i], PER_SESSION_REQ_NUM);
-          trace_ptr++;
-          if (trace[trace_ptr].opcode == NOP) trace_ptr = 0;
-        }
+    for (uint32_t session_id = tr_info->min_sess; session_id <= tr_info->max_sess; ++session_id) {
+      uint16_t wrkr = (uint16_t) (session_id / SESSIONS_PER_THREAD);
+      uint16_t s_i = (uint16_t) (session_id % SESSIONS_PER_THREAD);
+      uint16_t push_ptr = interface[wrkr].clt_push_ptr[s_i];
+      while (interface[wrkr].req_array[s_i][push_ptr].state == INVALID_REQ) {
+        if (CLIENT_DEBUG)
+          my_printf(yellow, "Client %u inserting req to worker %u for session %u, in slot %u from trace slot %u ptr %p\n",
+                        t_id, wrkr, s_i, push_ptr, trace_ptr, &interface[wrkr].req_array[s_i][push_ptr].state);
+
+        interface[wrkr].req_array[s_i][push_ptr].opcode = trace[trace_ptr].opcode;
+        memcpy(&interface[wrkr].req_array[s_i][push_ptr].key, trace[trace_ptr].key_hash, KEY_SIZE);
+
+        atomic_store_explicit(&interface[wrkr].req_array[s_i][push_ptr].state, (uint8_t) ACTIVE_REQ,
+                              memory_order_release);
+
+        clt_start_latency_mes(tr_info, session_id, trace[trace_ptr].opcode);
+
+        MOD_INCR(interface[wrkr].clt_push_ptr[s_i], PER_SESSION_REQ_NUM);
+
+        trace_ptr++;
+        if (trace[trace_ptr].opcode == NOP) trace_ptr = 0;
       }
     }
   }
