@@ -23,11 +23,17 @@
   #include "zk_config.h"
 #endif
 
+#ifdef HERMES
+#include "hr_config.h"
+#endif
+
 #ifndef KITE
   #ifndef ZOOKEEPER
   	#ifndef DERECHO
-    	#include "zk_config.h"
-    #endif
+    	#ifndef HERMES
+    		#include "zk_config.h"
+    	#endif
+		#endif
   #endif
 #endif
 

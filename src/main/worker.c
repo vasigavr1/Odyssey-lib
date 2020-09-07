@@ -20,11 +20,18 @@
 #endif
 
 #ifdef DERECHO
-
   #include "dr_inline_util.h"
   #include "dr_util.h"
   #define appl_init_qp_meta dr_init_qp_meta
   #define set_up_appl_ctx set_up_dr_ctx
+  #define main_loop main_loop
+#endif
+
+#ifdef HERMES
+  #include "hr_inline_util.h"
+  #include "hr_util.h"
+  #define appl_init_qp_meta hr_init_qp_meta
+  #define set_up_appl_ctx set_up_hr_ctx
   #define main_loop main_loop
 #endif
 

@@ -22,6 +22,11 @@
   #define appl_init_func dr_init_functionality
 #endif
 
+#ifdef HERMES
+  #include "hr_util.h"
+  #define appl_init_func hr_init_functionality
+#endif
+
 #include <init_func.h>
 
 
