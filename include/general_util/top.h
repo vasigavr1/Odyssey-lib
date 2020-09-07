@@ -35,7 +35,7 @@
 #include <stdbool.h>
 
 
-typedef enum {error_sys, kite_sys = 141, zookeeper_sys = 142, derecho_sys} system_t;
+typedef enum {error_sys, kite_sys = 141, zookeeper_sys = 142, derecho_sys, hermes_sys} system_t;
 
 //#define COMPILED_SYSTEM zookeeper_sys
 
@@ -53,12 +53,18 @@ typedef enum {error_sys, kite_sys = 141, zookeeper_sys = 142, derecho_sys} syste
   #define COMPILED_SYSTEM derecho_sys
 #endif
 
+#ifdef HERMES
+#define COMPILED_SYSTEM hermes_sys
+#endif
+
 ///Default for the IDE
 #ifndef KITE
   #ifndef ZOOKEEPER
     #ifndef DERECHO
-      #define ZOOKEPER
-      #define COMPILED_SYSTEM zookeeper_sys
+      #ifndef HERMES
+        #define ZOOKEPER
+        #define COMPILED_SYSTEM zookeeper_sys
+      #endif
     #endif
   #endif
 #endif
@@ -244,7 +250,7 @@ enum {
 #define PC_WRITES_NUM 5
 #define PC_IDEAL 0
 
-#define PER_SESSION_REQ_NUM 1 //(MS_WRITES_NUM + 4) //(HM_WRITES_NUM + 15) //(TREIBER_WRITES_NUM + 3) //   (HM_WRITES_NUM + 15) //   ((2 * PC_WRITES_NUM) + 5)
+#define PER_SESSION_REQ_NUM 15 //(MS_WRITES_NUM + 4) //(HM_WRITES_NUM + 15) //(TREIBER_WRITES_NUM + 3) //   (HM_WRITES_NUM + 15) //   ((2 * PC_WRITES_NUM) + 5)
 #define CLIENT_DEBUG 0
 
 
