@@ -39,26 +39,35 @@ typedef struct client_stats {
   // uint64_t ms_dequeues;
 } c_stats_t;
 
+// For latency measurements
+typedef enum {
+  RELEASE_REQ = 0,
+  ACQUIRE_REQ = 1,
+  WRITE_REQ = 2,
+  READ_REQ = 3,
+  RMW_REQ = 4,
+  NO_REQ
+} req_type_t;
+
+#define LATENCY_TYPE_NUM 5
 
 typedef struct latency_flags {
-  req_type measured_req_flag;
+  req_type_t measured_req_flag;
   uint32_t measured_sess_id;
-  struct key* key_to_measure;
+  //struct key* key_to_measure;
   struct timespec start;
 } latency_info_t;
 
 
-struct latency_counters{
-  uint32_t* acquires;
-  uint32_t* releases;
-  uint32_t* reads;
-  uint32_t* writes;
-  uint32_t* rmws;
+
+
+struct latency_counters {
+
+  uint32_t** requests;
   uint64_t total_measurements;
-  uint32_t max_acq_lat;
-  uint32_t max_rel_lat;
-  uint32_t max_read_lat;
-  uint32_t max_write_lat;
+  uint32_t *max_req_lat;
+  uint32_t *req_meas_num;
+
 };
 
 

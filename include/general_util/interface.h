@@ -516,7 +516,7 @@ static inline void user_interface()
       break;
     case RELEASE_BLOCKING:
       do {
-        my_printf(yellow, "RELEASE: Please input key_id, value_to_write \n");
+        my_printf(yellow, "RELEASE_REQ: Please input key_id, value_to_write \n");
       } while (scanf("%d %d", &key_id, &desired_int) != 2);
       assert(key_id >= 0 && desired_int < 256);
       printf ("key_id %u,  desired %u \n", key_id, desired_int);

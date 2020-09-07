@@ -133,11 +133,11 @@ typedef struct key mica_key_t;
 //-------------------------------------------
 /* ----------TRACE------------------------ */
 //-------------------------------------------
-#define WRITE_RATIO 1000 //Warning write ratio is given out of a 1000, e.g 10 means 10/1000 i.e. 1%
+#define WRITE_RATIO 500 //Warning write ratio is given out of a 1000, e.g 10 means 10/1000 i.e. 1%
 #define SC_RATIO 500// this is out of 1000, e.g. 10 means 1%
 #define ENABLE_RELEASES (1 && COMPILED_SYSTEM == kite_sys)
 #define ENABLE_ACQUIRES (1 && COMPILED_SYSTEM == kite_sys)
-#define RMW_RATIO 1000// this is out of 1000, e.g. 10 means 1%
+#define RMW_RATIO 400// this is out of 1000, e.g. 10 means 1%
 #define ENABLE_RMWS (1 && COMPILED_SYSTEM == kite_sys)
 #define FEED_FROM_TRACE 0 // used to enable skew++
 // RMW TRACE
@@ -244,7 +244,7 @@ enum {
 #define PC_WRITES_NUM 5
 #define PC_IDEAL 0
 
-#define PER_SESSION_REQ_NUM 15 //(MS_WRITES_NUM + 4) //(HM_WRITES_NUM + 15) //(TREIBER_WRITES_NUM + 3) //   (HM_WRITES_NUM + 15) //   ((2 * PC_WRITES_NUM) + 5)
+#define PER_SESSION_REQ_NUM 1 //(MS_WRITES_NUM + 4) //(HM_WRITES_NUM + 15) //(TREIBER_WRITES_NUM + 3) //   (HM_WRITES_NUM + 15) //   ((2 * PC_WRITES_NUM) + 5)
 #define CLIENT_DEBUG 0
 
 

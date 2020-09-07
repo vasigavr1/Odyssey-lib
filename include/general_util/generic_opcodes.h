@@ -8,16 +8,6 @@
 
 typedef enum compare_t{SMALLER, EQUAL, GREATER, ERROR} compare_t;
 
-// For latency measurements
-typedef enum {
-  NO_REQ,
-  RELEASE,
-  ACQUIRE,
-  WRITE_REQ,
-  READ_REQ,
-  RMW_REQ,
-  WRITE_REQ_BEFORE_CACHE
-} req_type;
 
 
 // CLIENT REQUESTS STATE

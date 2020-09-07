@@ -12,68 +12,44 @@
 //------------------------------ LATENCY MEASUREMENTS-------------------------
 //---------------------------------------------------------------------------*/
 
-static inline char *latency_req_to_str(req_type rt)
+static inline char *latency_req_to_str(req_type_t rt)
 {
   switch (rt){
     case NO_REQ:
       return "NO_REQ";
-    case RELEASE:
-      return "RELEASE";
-    case ACQUIRE:
-      return "ACQUIRE";
+    case RELEASE_REQ:
+      return "RELEASE_REQ";
+    case ACQUIRE_REQ:
+      return "ACQUIRE_REQ";
     case WRITE_REQ:
       return "WRITE_REQ";
     case READ_REQ:
       return "READ_REQ";
     case RMW_REQ:
       return "RMW_REQ";
-    case WRITE_REQ_BEFORE_CACHE:
-      return "WRITE_REQ_BEFORE_CACHE";
     default: assert(false);
   }
 }
 
 
 //Add latency to histogram (in microseconds)
-static inline void bookkeep_latency(uint64_t useconds, req_type rt){
-  uint32_t** latency_counter;
-  switch (rt){
-    case ACQUIRE:
-      latency_counter = &latency_count.acquires;
-      if (useconds > latency_count.max_acq_lat) {
-        latency_count.max_acq_lat = (uint32_t) useconds;
-        //my_printf(green, "Found max acq latency: %u/%d \n",
-        //             latency_count.max_acq_lat, useconds);
-      }
-      break;
-    case RELEASE:
-      latency_counter = &latency_count.releases;
-      if (useconds > latency_count.max_rel_lat) {
-        latency_count.max_rel_lat = (uint32_t) useconds;
-        //my_printf(yellow, "Found max rel latency: %u/%d \n", latency_count.max_rel_lat, useconds);
-      }
-      break;
-    case READ_REQ:
-      latency_counter = &latency_count.reads;
-      if (useconds > latency_count.max_read_lat) latency_count.max_read_lat = (uint32_t) useconds;
-      break;
-    case WRITE_REQ:
-      latency_counter = &latency_count.writes;
-      if (useconds > latency_count.max_write_lat) latency_count.max_write_lat = (uint32_t) useconds;
-      break;
-    case RMW_REQ:
-      latency_counter = &latency_count.rmws;
-      break;
-    default: assert(0);
-  }
-  latency_count.total_measurements++;
+static inline void bookkeep_latency(uint64_t useconds, req_type_t rt)
+{
 
+  check_state_with_allowed_flags(6, rt, RELEASE_REQ, ACQUIRE_REQ, READ_REQ, WRITE_REQ, RMW_REQ);
+  latency_count.total_measurements++;
+  latency_count.req_meas_num[rt]++;
+  if (useconds > latency_count.max_req_lat[rt])
+    latency_count.max_req_lat[rt] = (uint32_t) useconds;
 
   if (useconds > MAX_LATENCY)
-    (*latency_counter)[LATENCY_BUCKETS]++;
+    latency_count.requests[rt][LATENCY_BUCKETS]++;
   else
-    (*latency_counter)[useconds / (MAX_LATENCY / LATENCY_BUCKETS)]++;
+    latency_count.requests[rt][useconds / (MAX_LATENCY / LATENCY_BUCKETS)]++;
 }
+
+
+
 
 //
 static inline void report_latency(latency_info_t* latency_info)
@@ -97,13 +73,13 @@ static inline void report_latency(latency_info_t* latency_info)
   latency_info->measured_req_flag = NO_REQ;
 }
 
-static inline req_type map_opcodes_to_req_type(uint8_t opcode)
+static inline req_type_t map_opcodes_to_req_type(uint8_t opcode)
 {
   switch(opcode){
     case OP_RELEASE:
-      return RELEASE;
+      return RELEASE_REQ;
     case OP_ACQUIRE:
-      return ACQUIRE;
+      return ACQUIRE_REQ;
     case KVS_OP_GET:
       return READ_REQ;
     case KVS_OP_PUT:

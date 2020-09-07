@@ -8,7 +8,9 @@
 #endif
 
 #ifdef KITE
-  #include "util.h"
+
+#include <latency_util.h>
+#include "util.h"
   #define appl_stats kite_stats
 #endif
 
@@ -58,7 +60,6 @@ void *print_stats(void* no_arg)
 
 void print_latency_stats(void)
 {
-  uint8_t protocol = 0;
   FILE *latency_stats_fd;
   int i = 0;
   char filename[128];
@@ -74,46 +75,57 @@ void print_latency_stats(void)
           workload[MEASURE_READ_LATENCY]);
 
   latency_stats_fd = fopen(filename, "w");
-  fprintf(latency_stats_fd, "#---------------- ACQUIRES --------------\n");
-  for(i = 0; i < LATENCY_BUCKETS; ++i)
-    fprintf(latency_stats_fd, "acquires: %d, %d\n", i * (MAX_LATENCY / LATENCY_BUCKETS), latency_count.acquires[i]);
-  fprintf(latency_stats_fd, "acquires: -1, %d\n", latency_count.acquires[LATENCY_BUCKETS]); //print outliers
-  fprintf(latency_stats_fd, "acquires-hl: %d\n", latency_count.max_acq_lat); //print max
 
-  fprintf(latency_stats_fd, "#---------------- RELEASES ---------------\n");
-  for(i = 0; i < LATENCY_BUCKETS; ++i)
-    fprintf(latency_stats_fd, "releases: %d, %d\n",i * (MAX_LATENCY / LATENCY_BUCKETS), latency_count.releases[i]);
-  fprintf(latency_stats_fd, "releases: -1, %d\n",latency_count.releases[LATENCY_BUCKETS]); //print outliers
-  fprintf(latency_stats_fd, "releases-hl: %d\n", latency_count.max_rel_lat); //print max
-
-  fprintf(latency_stats_fd, "#---------------- READS --------------\n");
-  for(i = 0; i < LATENCY_BUCKETS; ++i)
-    fprintf(latency_stats_fd, "reads: %d, %d\n", i * (MAX_LATENCY / LATENCY_BUCKETS), latency_count.reads[i]);
-  fprintf(latency_stats_fd, "reads: -1, %d\n", latency_count.acquires[LATENCY_BUCKETS]); //print outliers
-  fprintf(latency_stats_fd, "reads-hl: %d\n", latency_count.max_acq_lat); //print max
-
-  fprintf(latency_stats_fd, "#---------------- WRITES ---------------\n");
-  for(i = 0; i < LATENCY_BUCKETS; ++i)
-    fprintf(latency_stats_fd, "writes: %d, %d\n",i * (MAX_LATENCY / LATENCY_BUCKETS), latency_count.writes[i]);
-  fprintf(latency_stats_fd, "writes: -1, %d\n",latency_count.releases[LATENCY_BUCKETS]); //print outliers
-  fprintf(latency_stats_fd, "writes-hl: %d\n", latency_count.max_rel_lat); //print max
-
-  fprintf(latency_stats_fd, "#---------------- RMWs ---------------\n");
-  for(i = 0; i < LATENCY_BUCKETS; ++i)
-    fprintf(latency_stats_fd, "rmws: %d, %d\n",i * (MAX_LATENCY / LATENCY_BUCKETS), latency_count.rmws[i]);
-  fprintf(latency_stats_fd, "rmws: -1, %d\n",latency_count.releases[LATENCY_BUCKETS]); //print outliers
-  fprintf(latency_stats_fd, "rmws-hl: %d\n", latency_count.max_rel_lat); //print max
+  for (req_type_t req_t = RELEASE_REQ; req_t < LATENCY_TYPE_NUM; ++req_t) {
+    if (latency_count.req_meas_num[req_t] == 0) continue;
+    fprintf(latency_stats_fd, "#---------------- %s --------------\n", latency_req_to_str(req_t));
+    for(i = 0; i < LATENCY_BUCKETS; ++i) {
+      fprintf(latency_stats_fd, "%s: %d, %d\n",
+              latency_req_to_str(req_t),
+              i * (MAX_LATENCY / LATENCY_BUCKETS), latency_count.requests[req_t][i]);
+    }
+    fprintf(latency_stats_fd, "%s: -1, %d\n", latency_req_to_str(req_t),
+            latency_count.requests[req_t][LATENCY_BUCKETS]); //print outliers
+    fprintf(latency_stats_fd, "%s: max, %d\n",
+            latency_req_to_str(req_t),
+            latency_count.max_req_lat[req_t]); //print max
+  }
 
 
-//    fprintf(latency_stats_fd, "#---------------- Hot Reads ----------------\n");
-//    for(i = 0; i < LATENCY_BUCKETS; ++i)
-//        fprintf(latency_stats_fd, "hr: %d, %d\n",i * (MAX_LATENCY / LATENCY_BUCKETS), latency_count.reads[i]);
-//    fprintf(latency_stats_fd, "hr: -1, %d\n",latency_count.reads[LATENCY_BUCKETS]); //print outliers
-//
-//    fprintf(latency_stats_fd, "#---------------- Hot Writes ---------------\n");
-//    for(i = 0; i < LATENCY_BUCKETS; ++i)
-//        fprintf(latency_stats_fd, "hw: %d, %d\n",i * (MAX_LATENCY / LATENCY_BUCKETS), latency_count.writes[i]);
-//    fprintf(latency_stats_fd, "hw: -1, %d\n",latency_count.writes[LATENCY_BUCKETS]); //print outliers
+
+
+  //
+  //fprintf(latency_stats_fd, "#---------------- ACQUIRES --------------\n");
+  //for(i = 0; i < LATENCY_BUCKETS; ++i)
+  //  fprintf(latency_stats_fd, "acquires: %d, %d\n", i * (MAX_LATENCY / LATENCY_BUCKETS), latency_count.acquires[i]);
+  //fprintf(latency_stats_fd, "acquires: -1, %d\n", latency_count.acquires[LATENCY_BUCKETS]); //print outliers
+  //fprintf(latency_stats_fd, "acquires-hl: %d\n", latency_count.max_acq_lat); //print max
+  //
+  //fprintf(latency_stats_fd, "#---------------- RELEASES ---------------\n");
+  //for(i = 0; i < LATENCY_BUCKETS; ++i)
+  //  fprintf(latency_stats_fd, "releases: %d, %d\n",i * (MAX_LATENCY / LATENCY_BUCKETS), latency_count.releases[i]);
+  //fprintf(latency_stats_fd, "releases: -1, %d\n",latency_count.releases[LATENCY_BUCKETS]); //print outliers
+  //fprintf(latency_stats_fd, "releases-hl: %d\n", latency_count.max_rel_lat); //print max
+  //
+  //fprintf(latency_stats_fd, "#---------------- READS --------------\n");
+  //for(i = 0; i < LATENCY_BUCKETS; ++i)
+  //  fprintf(latency_stats_fd, "reads: %d, %d\n", i * (MAX_LATENCY / LATENCY_BUCKETS), latency_count.reads[i]);
+  //fprintf(latency_stats_fd, "reads: -1, %d\n", latency_count.acquires[LATENCY_BUCKETS]); //print outliers
+  //fprintf(latency_stats_fd, "reads-hl: %d\n", latency_count.max_acq_lat); //print max
+  //
+  //fprintf(latency_stats_fd, "#---------------- WRITES ---------------\n");
+  //for(i = 0; i < LATENCY_BUCKETS; ++i)
+  //  fprintf(latency_stats_fd, "writes: %d, %d\n",i * (MAX_LATENCY / LATENCY_BUCKETS), latency_count.writes[i]);
+  //fprintf(latency_stats_fd, "writes: -1, %d\n",latency_count.releases[LATENCY_BUCKETS]); //print outliers
+  //fprintf(latency_stats_fd, "writes-hl: %d\n", latency_count.max_rel_lat); //print max
+  //
+  //fprintf(latency_stats_fd, "#---------------- RMWs ---------------\n");
+  //for(i = 0; i < LATENCY_BUCKETS; ++i)
+  //  fprintf(latency_stats_fd, "rmws: %d, %d\n",i * (MAX_LATENCY / LATENCY_BUCKETS), latency_count.rmws[i]);
+  //fprintf(latency_stats_fd, "rmws: -1, %d\n",latency_count.releases[LATENCY_BUCKETS]); //print outliers
+  //fprintf(latency_stats_fd, "rmws-hl: %d\n", latency_count.max_rel_lat); //print max
+
+
 
   fclose(latency_stats_fd);
 
