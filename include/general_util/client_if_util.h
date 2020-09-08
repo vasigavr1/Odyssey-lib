@@ -21,7 +21,8 @@ static inline void signal_completion_to_client(uint32_t sess_id,
 
     if (ENABLE_ASSERTIONS) {
       if (req_array->state != IN_PROGRESS_REQ)
-        printf("op %u, state %u slot %u/%u \n", req_array->opcode, req_array->state, sess_id, req_array_i);
+        printf("op %u, state %u slot %u/%u \n",
+               req_array->opcode, req_array->state, sess_id, req_array_i);
     }
     check_state_with_allowed_flags(2, req_array->state, IN_PROGRESS_REQ);
 

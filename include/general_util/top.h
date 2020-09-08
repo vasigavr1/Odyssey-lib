@@ -104,7 +104,7 @@ typedef struct key mica_key_t;
 #define KVS_SOCKET 0// (WORKERS_PER_MACHINE < 30 ? 0 : 1 )// socket where the cache is bind
 
 // CORE CONFIGURATION
-#define WORKERS_PER_MACHINE 1
+#define WORKERS_PER_MACHINE 20
 #define MACHINE_NUM 5
 #define SESSIONS_PER_THREAD 40
 #define ENABLE_CLIENTS 1
@@ -187,7 +187,7 @@ typedef struct key mica_key_t;
 #define DEBUG_READS 0
 #define DEBUG_READ_REPS 0
 #define DEBUG_TS 0
-#define DEBUG_INVS 1
+#define DEBUG_INVS 0
 #define CHECK_DBG_COUNTERS 0
 #define VERBOSE_DBG_COUNTER 0
 #define DEBUG_SS_BATCH 0
@@ -519,7 +519,7 @@ static inline void check_state_with_allowed_flags(int num_of_flags, ...)
       if (state == flags[i]) found = true;
     }
     if (!found) {
-      my_printf(red, "Checking state failed state: %u, Allowed flags: \n", state);
+      my_printf(red, "Checking state, failed state: %u, Allowed flags: \n", state);
       for (uint8_t i = 0; i < num_of_flags - 1; i++) {
         my_printf(red, "%u ", flags[i]);
       }

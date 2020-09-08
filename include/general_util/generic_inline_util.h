@@ -157,6 +157,7 @@ static inline char *system_name()
     case kite_sys: return "kite_sys";
     case zookeeper_sys: return "zookeeper_sys";
     case derecho_sys: return "derecho_sys";
+    case hermes_sys: return "hermes_sys";
     default: assert(false);
   }
 }
