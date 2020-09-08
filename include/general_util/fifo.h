@@ -153,7 +153,10 @@ static inline void* get_fifo_push_prev_slot(fifo_t *fifo)
   return get_fifo_prev_slot(fifo, fifo->push_ptr);
 }
 
-
+static inline void* get_fifo_push_relative_slot(fifo_t *fifo, int relative_move)
+{
+  return get_fifo_slot_mod(fifo, fifo->push_ptr + relative_move);
+}
 
 
 /// INCREMENT PUSH PULL
@@ -283,6 +286,7 @@ static inline void* get_send_fifo_ptr(fifo_t* send_fifo,
                                       uint16_t t_id)
 {
   check_fifo(send_fifo);
+  if (ENABLE_ASSERTIONS) assert(send_fifo->slot_meta != NULL);
   slot_meta_t *slot_meta = get_fifo_slot_meta_push(send_fifo);
   slot_meta->resp_size += resp_size;
 

@@ -8,7 +8,7 @@
 #include "kvs.h"
 
 
-#define CLIENT_ASSERTIONS 0
+#define CLIENT_ASSERTIONS 1
 #define NUM_OF_RMW_KEYS 50000
 
 /* --------------------------------------------------------------------------------------
@@ -38,7 +38,7 @@ static inline trace_info_t*  init_clt_trace(uint16_t t_id)
   tr_info->max_sess = (uint16_t) (tr_info->sess_offset + (SESSIONS_PER_CLIENT -1));
   tr_info->min_wrkr = (uint16_t) (tr_info->min_sess / SESSIONS_PER_THREAD);
   tr_info->max_wrkr = (uint16_t) (tr_info->max_sess / SESSIONS_PER_THREAD);
-  tr_info->worker_num = tr_info->max_wrkr - tr_info->min_wrkr;
+  tr_info->worker_num = 1 + tr_info->max_wrkr - tr_info->min_wrkr;
 
   tr_info->measuring_latency = tr_info->m_id == LATENCY_MACHINE &&
                                tr_info->t_id == LATENCY_THREAD;
@@ -54,15 +54,26 @@ static inline trace_info_t*  init_clt_trace(uint16_t t_id)
               "Sizeof client op %u \n",
               t_id, tr_info->min_sess, tr_info->max_sess,
               tr_info->min_wrkr, tr_info->max_wrkr, sizeof(client_op_t));
-  client_op_t *tmp_clt_op = calloc(tr_info->worker_num, sizeof(tmp_clt_op));
+
+  uint32_t cache_line_num  = 1 + (VALUE_SIZE / 64);
+  uint8_t **value_ptrs = calloc(tr_info->worker_num, sizeof(uint8_t*));
+  for (int wrkr_i = 0; wrkr_i < tr_info->worker_num; ++wrkr_i) {
+    value_ptrs[wrkr_i] = memalign(64, cache_line_num * 64);
+  }
+
+  //client_op_t *tmp_clt_op = calloc(tr_info->worker_num, sizeof(tmp_clt_op));
 
   for (int session_id = tr_info->min_sess; session_id <= tr_info->max_sess; ++session_id) {
     uint16_t wrkr = (uint16_t) (session_id / SESSIONS_PER_THREAD);
+    assert(wrkr >= tr_info->min_wrkr && wrkr <= tr_info->max_wrkr);
+    uint16_t mod_wrkr = wrkr - tr_info->min_wrkr;
+    assert(mod_wrkr < tr_info->worker_num);
+    assert(value_ptrs[mod_wrkr] != NULL);
     uint16_t s_i = (uint16_t) (session_id % SESSIONS_PER_THREAD);
     for (int req_i = 0; req_i < PER_SESSION_REQ_NUM; ++req_i) {
       interface[wrkr].req_array[s_i][req_i].val_len = (uint32_t) VALUE_SIZE;
-      interface[wrkr].req_array[s_i][req_i].value_to_read = tmp_clt_op[wrkr].value_to_write;
-      interface[wrkr].req_array[s_i][req_i].rmw_is_successful = (bool *) &tmp_clt_op[wrkr].opcode;
+      interface[wrkr].req_array[s_i][req_i].value_to_read = value_ptrs[mod_wrkr];
+      interface[wrkr].req_array[s_i][req_i].rmw_is_successful = (bool *) value_ptrs[mod_wrkr];
     }
   }
   return tr_info;

@@ -104,7 +104,7 @@ typedef struct key mica_key_t;
 #define KVS_SOCKET 0// (WORKERS_PER_MACHINE < 30 ? 0 : 1 )// socket where the cache is bind
 
 // CORE CONFIGURATION
-#define WORKERS_PER_MACHINE 20
+#define WORKERS_PER_MACHINE 1
 #define MACHINE_NUM 5
 #define SESSIONS_PER_THREAD 40
 #define ENABLE_CLIENTS 1
@@ -112,7 +112,7 @@ typedef struct key mica_key_t;
 #define CLIENTS_PER_MACHINE (ENABLE_CLIENTS ? CLIENTS_PER_MACHINE_ : 0)
 #define ENABLE_LOCK_FREE_READING 1
 
-#define ENABLE_ASSERTIONS 0
+#define ENABLE_ASSERTIONS 1
 
 #define PUT_A_MACHINE_TO_SLEEP 0
 #define MACHINE_THAT_SLEEPS 1
@@ -187,6 +187,7 @@ typedef struct key mica_key_t;
 #define DEBUG_READS 0
 #define DEBUG_READ_REPS 0
 #define DEBUG_TS 0
+#define DEBUG_INVS 1
 #define CHECK_DBG_COUNTERS 0
 #define VERBOSE_DBG_COUNTER 0
 #define DEBUG_SS_BATCH 0

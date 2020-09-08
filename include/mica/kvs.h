@@ -144,7 +144,17 @@ static inline void KVS_locate_one_kv_pair(int op_i, uint *tag, struct mica_bkt *
 	}
 }
 
-
+static inline void KVS_check_key(mica_op_t *kv_ptr, mica_key_t opkey, uint32_t op_i)
+{
+	if (ENABLE_ASSERTIONS && kv_ptr == NULL) assert(false);
+	bool key_found = memcmp(&kv_ptr->key, &opkey, KEY_SIZE) == 0;
+	if (unlikely(ENABLE_ASSERTIONS && !key_found)) {
+		my_printf(red, "Kvs miss %u\n", op_i);
+		cust_print_key("Op", &opkey);
+		cust_print_key("KV_ptr", &kv_ptr->key);
+		assert(false);
+	}
+}
 
 // After locating the buckets locate all kv pairs
 static inline void KVS_locate_all_kv_pairs(uint16_t op_num, uint *tag, struct mica_bkt **bkt_ptr,
@@ -162,6 +172,10 @@ static inline void KVS_local_read(mica_op_t *kv_ptr,
                                   uint8_t *resp_type,
                                   uint16_t t_id)
 {
+  if (ENABLE_ASSERTIONS) {
+    assert(value_to_read != NULL);
+    assert(kv_ptr != NULL);
+  }
   uint32_t debug_cntr = 0;
   uint64_t tmp_lock = read_seqlock_lock_free(&kv_ptr->seqlock);
   do {

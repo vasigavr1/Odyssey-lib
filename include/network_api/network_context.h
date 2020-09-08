@@ -58,6 +58,20 @@ typedef struct ctx_com_message_ud_req {
 } ctx_com_mes_ud_t;
 
 
+typedef struct ctx_trace_op {
+  uint16_t session_id;
+  mica_key_t key;
+  uint8_t opcode;// if the opcode is 0, it has never been RMWed, if it's 1 it has
+  uint8_t val_len; // this represents the maximum value len
+  uint8_t value[VALUE_SIZE]; // if it's an RMW the first 4 bytes point to the entry
+  uint8_t *value_to_write;
+  uint8_t *value_to_read; //compare value for CAS/  addition argument for F&A
+  uint32_t index_to_req_array;
+  uint32_t real_val_len; // this is the value length the client is interested in
+} ctx_trace_op_t;
+
+
+
 typedef enum{
   SEND_ACK_RECV_ACK,
 
@@ -387,6 +401,8 @@ static void create_per_qp_meta(per_qp_meta_t* qp_meta,
 
   if (send_fifo_slot_num > 0) {
     qp_meta->has_send_fifo = true;
+    printf("Setting up a send_fifo with %u slots, %u size\n",
+           send_fifo_slot_num, send_size);
     qp_meta->send_fifo = fifo_constructor(send_fifo_slot_num,
                                           send_size, true, mes_header, 1);
   }
@@ -822,6 +838,7 @@ static void ctx_set_up_q_info(context_t *ctx)
       b_i++;
     }
   }
+  free(is_broadcast);
 }
 
 static void ctx_set_qp_meta_mfs(context_t *ctx,

@@ -402,4 +402,92 @@ static inline void ctx_insert_commit(context_t *ctx,
   slot_meta->coalesce_num += com_num;
 }
 
+
+
+/* ---------------------------------------------------------------------------
+//------------------------------  --------------------------------
+//---------------------------------------------------------------------------*/
+
+static inline void create_inputs_of_op(uint8_t **value_to_write, uint8_t **value_to_read,
+                                       uint32_t *real_val_len, uint8_t *opcode,
+                                       uint32_t *index_to_req_array,
+                                       mica_key_t *key, uint8_t *op_value, trace_t *trace,
+                                       int working_session, uint16_t t_id)
+{
+  client_op_t *if_cl_op = NULL;
+  if (ENABLE_CLIENTS) {
+    uint32_t pull_ptr = interface[t_id].wrkr_pull_ptr[working_session];
+    if_cl_op = &interface[t_id].req_array[working_session][pull_ptr];
+    (*index_to_req_array) = pull_ptr;
+    check_client_req_state_when_filling_op(working_session, pull_ptr,
+                                           *index_to_req_array, t_id);
+
+    (*opcode) = if_cl_op->opcode;
+    (*key) = if_cl_op->key;
+    (*real_val_len) = if_cl_op->val_len;
+    (*value_to_write) = if_cl_op->value_to_write;
+    (*value_to_read) = if_cl_op->value_to_read;
+  }
+  else {
+    (*opcode) = trace->opcode;
+    *(uint64_t *) (key) = *(uint64_t *) trace->key_hash;
+    (*real_val_len) = (uint32_t) VALUE_SIZE;
+    (*value_to_write) = op_value;
+    (*value_to_read) = op_value;
+    if (*opcode == FETCH_AND_ADD) *(uint64_t *) op_value = 1;
+  }
+}
+
+
+
+
+
+static inline void ctx_check_op(ctx_trace_op_t *op)
+{
+  if (ENABLE_ASSERTIONS) {
+    check_state_with_allowed_flags(3, op->opcode, KVS_OP_PUT, KVS_OP_GET);
+    assert(op->real_val_len > 0);
+    assert(op->index_to_req_array < PER_SESSION_REQ_NUM);
+    assert(op->session_id < SESSIONS_PER_THREAD);
+    assert(op->key.bkt > 0);
+  }
+}
+
+static inline void ctx_fill_trace_op(context_t *ctx,
+                                    trace_t *trace_op,
+                                    ctx_trace_op_t *op,
+                                    int working_session)
+{
+  create_inputs_of_op(&op->value_to_write, &op->value_to_read, &op->real_val_len,
+                      &op->opcode, &op->index_to_req_array,
+                      &op->key, op->value, trace_op, working_session, ctx->t_id);
+
+  ctx_check_op(op);
+
+  if (ENABLE_ASSERTIONS) assert(op->opcode != NOP);
+  bool is_update = op->opcode == KVS_OP_PUT;
+  if (WRITE_RATIO >= 1000) assert(is_update);
+  op->val_len = is_update ? (uint8_t) (VALUE_SIZE >> SHIFT_BITS) : (uint8_t) 0;
+
+  op->session_id = (uint16_t) working_session;
+
+
+
+
+  if (ENABLE_CLIENTS) {
+    signal_in_progress_to_client(op->session_id, op->index_to_req_array, ctx->t_id);
+    if (ENABLE_ASSERTIONS) assert(interface[ctx->t_id].wrkr_pull_ptr[working_session] == op->index_to_req_array);
+    MOD_INCR(interface[ctx->t_id].wrkr_pull_ptr[working_session], PER_SESSION_REQ_NUM);
+  }
+
+  if (ENABLE_ASSERTIONS == 1) {
+    assert(WRITE_RATIO > 0 || is_update == 0);
+    if (is_update) assert(op->val_len > 0);
+  }
+}
+
+
+
+
+
 #endif //ODYSSEY_NETW_FUNC_H
