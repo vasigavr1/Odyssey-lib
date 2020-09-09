@@ -158,6 +158,11 @@ static inline void* get_fifo_push_relative_slot(fifo_t *fifo, int relative_move)
   return get_fifo_slot_mod(fifo, fifo->push_ptr + relative_move);
 }
 
+static inline void* get_fifo_pull_relative_slot(fifo_t *fifo, int relative_move)
+{
+  return get_fifo_slot_mod(fifo, fifo->pull_ptr + relative_move);
+}
+
 
 /// INCREMENT PUSH PULL
 static inline void fifo_incr_push_ptr(fifo_t *fifo)

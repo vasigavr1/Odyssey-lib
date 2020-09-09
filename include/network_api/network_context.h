@@ -59,15 +59,15 @@ typedef struct ctx_com_message_ud_req {
 
 
 typedef struct ctx_trace_op {
-  uint16_t session_id;
   mica_key_t key;
-  uint8_t opcode;// if the opcode is 0, it has never been RMWed, if it's 1 it has
-  uint8_t val_len; // this represents the maximum value len
-  uint8_t value[VALUE_SIZE]; // if it's an RMW the first 4 bytes point to the entry
   uint8_t *value_to_write;
   uint8_t *value_to_read; //compare value for CAS/  addition argument for F&A
   uint32_t index_to_req_array;
   uint32_t real_val_len; // this is the value length the client is interested in
+  uint16_t session_id;
+  uint8_t opcode;
+  uint8_t val_len; // this represents the maximum value len
+  uint8_t value[VALUE_SIZE];
 } ctx_trace_op_t;
 
 
