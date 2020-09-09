@@ -33,7 +33,7 @@ static inline trace_info_t*  init_clt_trace(uint16_t t_id)
   tr_info->t_id = t_id;
   tr_info->m_id = (uint8_t) machine_id;
   tr_info->sess_offset = (uint16_t) (t_id * SESSIONS_PER_CLIENT);
-  assert(sess_offset + SESSIONS_PER_CLIENT <= SESSIONS_PER_MACHINE);
+  assert(tr_info->sess_offset + SESSIONS_PER_CLIENT <= SESSIONS_PER_MACHINE);
   tr_info->min_sess = tr_info->sess_offset;
   tr_info->max_sess = (uint16_t) (tr_info->sess_offset + (SESSIONS_PER_CLIENT -1));
   tr_info->min_wrkr = (uint16_t) (tr_info->min_sess / SESSIONS_PER_THREAD);

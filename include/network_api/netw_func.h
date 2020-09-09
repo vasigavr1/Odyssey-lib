@@ -41,7 +41,7 @@ static inline void ctx_insert_mes(context_t *ctx, uint16_t qp_id,
 
 
   if (slot_meta->coalesce_num == 1)
-    fifo_incr_capacity(send_fifo);
+    fifo_increm_capacity(send_fifo);
 
   fifo_incr_net_capacity(send_fifo);
 }
@@ -395,7 +395,7 @@ static inline void ctx_insert_commit(context_t *ctx,
   else { //otherwise push a new commit
     commit->l_id = last_committed_id;
     commit->com_num = com_num;
-    fifo_incr_capacity(send_fifo);
+    fifo_increm_capacity(send_fifo);
   }
   send_fifo->net_capacity += com_num;
   slot_meta_t *slot_meta = get_fifo_slot_meta_push(send_fifo);

@@ -234,10 +234,17 @@ static inline void fifo_set_pull_backward_ptr(fifo_t *fifo, uint32_t new_ptr)
 
 
 ///
-static inline void fifo_incr_capacity(fifo_t *fifo)
+static inline void fifo_increm_capacity(fifo_t *fifo)
 {
   check_fifo(fifo);
   fifo->capacity++;
+  check_fifo(fifo);
+}
+
+static inline void fifo_increase_capacity(fifo_t *fifo, uint32_t add_num)
+{
+  check_fifo(fifo);
+  fifo->capacity += add_num;
   check_fifo(fifo);
 }
 

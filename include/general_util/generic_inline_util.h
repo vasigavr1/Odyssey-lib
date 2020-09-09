@@ -253,6 +253,24 @@ static inline compare_t compare_netw_ts_with_ts(struct network_ts_tuple *ts1, st
   return ERROR;
 }
 
+static inline compare_t compare_flat_ts(uint64_t version1, uint8_t m_id1,
+                                        uint64_t version2, uint8_t m_id2)
+{
+  if ((version1 == version2) &&
+      (m_id1 == m_id2))
+    return EQUAL;
+  else if ((version1 < version2) ||
+           ((version1 == version2) &&
+            (m_id1 < m_id2)))
+    return SMALLER;
+  else if ((version1 > version2) ||
+           ((version1 == version2)) &&
+           (m_id1 > m_id2))
+    return GREATER;
+
+  return ERROR;
+}
+
 static inline compare_t compare_ts_with_flat(struct ts_tuple *ts1, uint32_t version2, uint8_t m_id2) {
   if ((ts1->version == version2) &&
       (ts1->m_id == m_id2))
