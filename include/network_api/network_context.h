@@ -401,8 +401,8 @@ static void create_per_qp_meta(per_qp_meta_t* qp_meta,
 
   if (send_fifo_slot_num > 0) {
     qp_meta->has_send_fifo = true;
-    printf("Setting up a send_fifo with %u slots, %u size\n",
-           send_fifo_slot_num, send_size);
+    if (ENABLE_ASSERTIONS) printf("Setting up a send_fifo with %u slots, %u size\n",
+                                  send_fifo_slot_num, send_size);
     qp_meta->send_fifo = fifo_constructor(send_fifo_slot_num,
                                           send_size, true, mes_header, 1);
   }

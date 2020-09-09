@@ -58,7 +58,7 @@ static inline void report_latency(latency_info_t* latency_info)
   clock_gettime(CLOCK_MONOTONIC, &end);
   uint64_t useconds = (uint64_t)((end.tv_sec - latency_info->start.tv_sec) * MILLION) +
                  ((end.tv_nsec - latency_info->start.tv_nsec) / 1000);  //(end.tv_nsec - start->tv_nsec) / 1000;
-  if (ENABLE_ASSERTIONS) assert(useconds > 0);
+  //if (ENABLE_ASSERTIONS) assert(useconds > 0);
 
   if (DEBUG_LATENCY) {
     printf("Latency of a req of type %s is %lu us, sess %u , measured reqs: %lu \n",

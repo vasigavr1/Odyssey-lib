@@ -104,20 +104,20 @@ typedef struct key mica_key_t;
 #define KVS_SOCKET 0// (WORKERS_PER_MACHINE < 30 ? 0 : 1 )// socket where the cache is bind
 
 // CORE CONFIGURATION
-#define WORKERS_PER_MACHINE 20
+#define WORKERS_PER_MACHINE 25
 #define MACHINE_NUM 5
-#define SESSIONS_PER_THREAD 40
+#define SESSIONS_PER_THREAD 50
 #define ENABLE_CLIENTS 1
-#define CLIENTS_PER_MACHINE_ 4
+#define CLIENTS_PER_MACHINE_ 5
 #define CLIENTS_PER_MACHINE (ENABLE_CLIENTS ? CLIENTS_PER_MACHINE_ : 0)
 #define ENABLE_LOCK_FREE_READING 1
 
-#define ENABLE_ASSERTIONS 1
+#define ENABLE_ASSERTIONS 0
 
 #define PUT_A_MACHINE_TO_SLEEP 0
 #define MACHINE_THAT_SLEEPS 1
 
-#define MEASURE_LATENCY 1
+#define MEASURE_LATENCY 0
 #define LATENCY_MACHINE 0
 #define LATENCY_THREAD 0
 #define MEASURE_READ_LATENCY 2 // 2 means mixed
@@ -126,7 +126,7 @@ typedef struct key mica_key_t;
 #define CREDIT_TIMEOUT  M_16 // B_4_EXACT //
 
 // PRINTS -- STATS
-#define EXIT_ON_PRINT 1
+#define EXIT_ON_PRINT 0
 #define PRINT_NUM 1
 #define ENABLE_MS_MEASUREMENTS 0 // finer granularity measurements
 #define SHOW_STATS_LATENCY_STYLE 1
@@ -139,7 +139,7 @@ typedef struct key mica_key_t;
 //-------------------------------------------
 /* ----------TRACE------------------------ */
 //-------------------------------------------
-#define WRITE_RATIO 500 //Warning write ratio is given out of a 1000, e.g 10 means 10/1000 i.e. 1%
+#define WRITE_RATIO 1000 //Warning write ratio is given out of a 1000, e.g 10 means 10/1000 i.e. 1%
 #define SC_RATIO 500// this is out of 1000, e.g. 10 means 1%
 #define ENABLE_RELEASES (1 && COMPILED_SYSTEM == kite_sys)
 #define ENABLE_ACQUIRES (1 && COMPILED_SYSTEM == kite_sys)

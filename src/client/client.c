@@ -8,7 +8,7 @@
 #include "kvs.h"
 
 
-#define CLIENT_ASSERTIONS 1
+#define CLIENT_ASSERTIONS 0
 #define NUM_OF_RMW_KEYS 50000
 
 /* --------------------------------------------------------------------------------------
