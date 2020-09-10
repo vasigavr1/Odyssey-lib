@@ -11,10 +11,50 @@
 #include "rdma_gen_util.h"
 #include "generic_inline_util.h"
 #include "config_util.h"
-#include "../network_api/netw_func.h"
+#include "netw_func.h"
+#include "network_context.h"
 #include "fifo.h"
-#include "../multicast/multicast.h"
+#include "multicast.h"
 
+
+static inline bool all_sessions_are_stalled(context_t *ctx,
+                                            bool all_sessions_stalled,
+                                            uint32_t *stalled_sessions_dbg_counter)
+{
+  // if there are clients the "all_sessions_stalled" flag is not used,
+  // so we need not bother checking it
+  if (!ENABLE_CLIENTS && all_sessions_stalled) {
+    stalled_sessions_dbg_counter++;
+    if (ENABLE_ASSERTIONS) {
+      if (*stalled_sessions_dbg_counter == MILLION) {
+        //my_printf(red, "Wrkr %u, all sessions are stalled \n", ctx->t_id);
+        *stalled_sessions_dbg_counter = 0;
+      }
+    }
+    return true;
+  } else if (ENABLE_ASSERTIONS) *stalled_sessions_dbg_counter = 0;
+  return false;
+}
+
+
+static inline bool find_starting_session(context_t *ctx,
+                                         uint16_t last_session,
+                                         bool* stalled,
+                                         int* working_session)
+{
+  for (uint16_t i = 0; i < SESSIONS_PER_THREAD; i++) {
+    uint16_t sess_i = (uint16_t)((last_session + i) % SESSIONS_PER_THREAD);
+    if (pull_request_from_this_session(stalled[sess_i], sess_i, ctx->t_id)) {
+      *working_session = sess_i;
+      break;
+    }
+  }
+  if (ENABLE_CLIENTS) {
+    if (*working_session == -1) return false;
+  }
+  else if (ENABLE_ASSERTIONS) assert(*working_session != -1);
+  return true;
+}
 
 
 //static inline void create_inputs_of_op(uint8_t **value_to_write, uint8_t **value_to_read,
