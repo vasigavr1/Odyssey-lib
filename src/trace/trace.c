@@ -1,14 +1,8 @@
 //
-// Created by vasilis on 24/06/2020.
+// Created by vasilis on 11/09/20.
 //
 
-#ifndef KITE_TRACE_UTIL_H
-#define KITE_TRACE_UTIL_H
-
-#include "top.h"
-#include "city.h"
-
-
+#include "../../include/trace/trace_util.h"
 
 typedef struct opcode_info {
   bool is_rmw;
@@ -31,10 +25,10 @@ static uint8_t compute_opcode(struct opcode_info *opc_info, uint *seed)
   uint8_t  opcode = 0;
   uint8_t cas_opcode = USE_WEAK_CAS ? COMPARE_AND_SWAP_WEAK : COMPARE_AND_SWAP_STRONG;
   bool is_rmw = false, is_update = false, is_sc = false;
-  if (ENABLE_RMWS ) {
+  if (ENABLE_RMWS) {
     if (ALL_RMWS_SINGLE_KEY) is_rmw = true;
     else
-      is_rmw = rand_r(seed) % 1000 < RMW_RATIO;
+      is_rmw = rand() % 1000 < RMW_RATIO;
   }
   if (!is_rmw) {
     is_update = rand() % 1000 < WRITE_RATIO; //rand_r(seed) % 1000 < WRITE_RATIO;
@@ -78,7 +72,7 @@ static uint8_t compute_opcode(struct opcode_info *opc_info, uint *seed)
 
 
 // Parse a trace, use this for skewed workloads as uniform trace can be manufactured easily
-static  trace_t* parse_trace(char* path, int t_id){
+static trace_t* parse_trace(char* path, int t_id){
   trace_t *trace;
   FILE * fp;
   ssize_t read;
@@ -150,7 +144,7 @@ static  trace_t* parse_trace(char* path, int t_id){
     my_printf(cyan, "Skewed TRACE: Exponent %d, Hottest key accessed: %.2f%%  \n", SKEW_EXPONENT_A,
               (100 * hottest_key_counter / (double) cmd_count));
     printf("Writes: %.2f%%, SC Writes: %.2f%%, Reads: %.2f%% SC Reads: %.2f%% RMWs: %.2f%%\n"
-           "Trace w_size %d \n",
+             "Trace w_size %d \n",
            (double) (opc_info->writes * 100) / cmd_count,
            (double) (opc_info->sc_writes * 100) / cmd_count,
            (double) (opc_info->reads * 100) / cmd_count,
@@ -213,7 +207,7 @@ static trace_t* manufacture_trace(int t_id)
   if (t_id == 0) {
     my_printf(cyan, "UNIFORM TRACE \n");
     printf("Writes: %.2f%%, SC Writes: %.2f%%, Reads: %.2f%% SC Reads: %.2f%% RMWs: %.2f%%, "
-           "CAS: %.2f%%, F&A: %.2f%%, RMW-Acquires: %.2f%%\n Trace w_size %u/%d, Write ratio %d \n",
+             "CAS: %.2f%%, F&A: %.2f%%, RMW-Acquires: %.2f%%\n Trace w_size %u/%d, Write ratio %d \n",
            (double) (opc_info->writes * 100) / TRACE_SIZE,
            (double) (opc_info->sc_writes * 100) / TRACE_SIZE,
            (double) (opc_info->reads * 100) / TRACE_SIZE,
@@ -233,7 +227,7 @@ static trace_t* manufacture_trace(int t_id)
 }
 
 // Initiialize the trace
-static trace_t* trace_init(uint16_t t_id) {
+trace_t* trace_init(uint16_t t_id) {
   trace_t *trace;
   //create the trace path path
   if (FEED_FROM_TRACE == 1) {
@@ -257,11 +251,3 @@ static trace_t* trace_init(uint16_t t_id) {
   assert(trace != NULL);
   return trace;
 }
-
-
-
-
-
-
-
-#endif //KITE_TRACE_UTIL_H

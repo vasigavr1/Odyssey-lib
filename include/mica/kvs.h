@@ -8,7 +8,7 @@
 
 #include <generic_inline_util.h>
 #include "top.h"
-#include "client_if_util.h"
+#include "wrkr_side_calls.h"
 #include <debug_util.h>
 
 #ifdef KITE

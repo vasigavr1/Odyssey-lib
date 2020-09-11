@@ -9,7 +9,7 @@
 #include <hrd.h>
 #include <rdma_gen_util.h>
 #include "top.h"
-#include "fifo.h"
+#include "../fifo/fifo.h"
 #include "generic_inline_util.h"
 #include "ctx_templates.h"
 typedef struct context context_t;

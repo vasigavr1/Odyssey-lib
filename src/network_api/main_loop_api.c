@@ -17,13 +17,12 @@ inline void ctx_refill_recvs(context_t *ctx,
 //------------------------------ INSERT --------------------------------
 //---------------------------------------------------------------------------*/
 
-inline __attribute__((always_inline))
-void ctx_insert_mes(context_t *ctx, uint16_t qp_id,
-                           uint32_t send_size,
-                           uint32_t recv_size,
-                           bool break_message,
-                           void* source,
-                           uint32_t source_flag)
+forceinline void ctx_insert_mes(context_t *ctx, uint16_t qp_id,
+                                uint32_t send_size,
+                                uint32_t recv_size,
+                                bool break_message,
+                                void* source,
+                                uint32_t source_flag)
 {
   per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_id];
   fifo_t* send_fifo = qp_meta->send_fifo;
@@ -104,9 +103,9 @@ inline void ctx_send_broadcasts(context_t *ctx, uint16_t qp_id)
 //------------------------------ UNICASTS --------------------------------
 //---------------------------------------------------------------------------*/
 
-static inline void ctx_forge_unicast_wr(context_t *ctx,
-                                        uint16_t qp_id,
-                                        uint16_t mes_i)
+static forceinline void ctx_forge_unicast_wr(context_t *ctx,
+                                             uint16_t qp_id,
+                                             uint16_t mes_i)
 {
   per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_id];
   struct ibv_sge *send_sgl = qp_meta->send_sgl;
@@ -132,7 +131,7 @@ static inline void ctx_forge_unicast_wr(context_t *ctx,
 }
 
 
-static inline bool ctx_can_send_unicasts (per_qp_meta_t *qp_meta)
+static forceinline bool ctx_can_send_unicasts (per_qp_meta_t *qp_meta)
 {
   fifo_t *send_fifo = qp_meta->send_fifo;
   if (qp_meta->needs_credits)
@@ -142,8 +141,8 @@ static inline bool ctx_can_send_unicasts (per_qp_meta_t *qp_meta)
 }
 
 inline void ctx_check_unicast_before_send(context_t *ctx,
-                                                 uint8_t rm_id,
-                                                 uint16_t qp_id)
+                                          uint8_t rm_id,
+                                          uint16_t qp_id)
 {
   if (ENABLE_ASSERTIONS) {
     per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_id];
@@ -278,12 +277,11 @@ inline void ctx_increase_credits_on_polling_ack(context_t *ctx,
 // Returns true if the insert is successful,
 // if not  (it's probably because the machine lost some messages)
 // the old ack needs to be sent, before we try again to insert
-inline __attribute__((always_inline))
-bool ctx_ack_insert(context_t *ctx,
-                    uint16_t qp_id,
-                    uint8_t mes_num,
-                    uint64_t l_id,
-                    const uint8_t m_id)
+forceinline bool ctx_ack_insert(context_t *ctx,
+                                uint16_t qp_id,
+                                uint8_t mes_num,
+                                uint64_t l_id,
+                                const uint8_t m_id)
 {
   per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_id];
   ctx_ack_mes_t *acks = (ctx_ack_mes_t *) qp_meta->send_fifo->fifo;
@@ -323,8 +321,7 @@ bool ctx_ack_insert(context_t *ctx,
 
 
 
-inline __attribute__((always_inline))
-void ctx_send_acks(context_t *ctx, uint16_t qp_id)
+forceinline void ctx_send_acks(context_t *ctx, uint16_t qp_id)
 {
   per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_id];
   per_qp_meta_t *recv_qp_meta = &ctx->qp_meta[qp_meta->recv_qp_id];
@@ -376,10 +373,10 @@ void ctx_send_acks(context_t *ctx, uint16_t qp_id)
 //------------------------------ Commits --------------------------------
 //---------------------------------------------------------------------------*/
 
-inline void ctx_insert_commit(context_t *ctx,
-                                     uint16_t qp_id,
-                                     uint16_t com_num,
-                                     uint64_t last_committed_id)
+forceinline void ctx_insert_commit(context_t *ctx,
+                                   uint16_t qp_id,
+                                   uint16_t com_num,
+                                   uint64_t last_committed_id)
 {
   fifo_t *send_fifo = ctx->qp_meta[qp_id].send_fifo;
   ctx_com_mes_t *commit = (ctx_com_mes_t *) get_fifo_push_prev_slot(send_fifo);
@@ -402,12 +399,11 @@ inline void ctx_insert_commit(context_t *ctx,
 //------------------------------  --------------------------------
 //---------------------------------------------------------------------------*/
 
-inline __attribute__((always_inline))
-void create_inputs_of_op(uint8_t **value_to_write, uint8_t **value_to_read,
-                         uint32_t *real_val_len, uint8_t *opcode,
-                         uint32_t *index_to_req_array,
-                         mica_key_t *key, uint8_t *op_value, trace_t *trace,
-                         int working_session, uint16_t t_id)
+forceinline void create_inputs_of_op(uint8_t **value_to_write, uint8_t **value_to_read,
+                                     uint32_t *real_val_len, uint8_t *opcode,
+                                     uint32_t *index_to_req_array,
+                                     mica_key_t *key, uint8_t *op_value, trace_t *trace,
+                                     int working_session, uint16_t t_id)
 {
   client_op_t *if_cl_op = NULL;
   if (ENABLE_CLIENTS) {
@@ -446,11 +442,10 @@ static inline void ctx_check_op(ctx_trace_op_t *op)
 }
 
 
-inline __attribute__((always_inline))
-void  ctx_fill_trace_op(context_t *ctx,
-                        trace_t *trace_op,
-                        ctx_trace_op_t *op,
-                        int working_session)
+forceinline void  ctx_fill_trace_op(context_t *ctx,
+                                    trace_t *trace_op,
+                                    ctx_trace_op_t *op,
+                                    int working_session)
 {
   create_inputs_of_op(&op->value_to_write, &op->value_to_read, &op->real_val_len,
                       &op->opcode, &op->index_to_req_array,

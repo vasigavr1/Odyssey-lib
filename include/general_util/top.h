@@ -104,9 +104,16 @@ typedef struct key mica_key_t;
 #define KVS_SOCKET 0// (WORKERS_PER_MACHINE < 30 ? 0 : 1 )// socket where the cache is bind
 
 // CORE CONFIGURATION
-#define WORKERS_PER_MACHINE 25
 #define MACHINE_NUM 5
-#define SESSIONS_PER_THREAD 50
+
+
+#define WORKERS_PER_MACHINE 25
+#define SESSIONS_PER_THREAD 80
+#define WRITE_RATIO 00 //Warning write ratio is given out of a 1000, e.g 10 means 10/1000 i.e. 1%
+#define RMW_RATIO 10// this is out of 1000, e.g. 10 means 1%
+#define ENABLE_MULTICAST_ 0
+
+
 #define ENABLE_CLIENTS 0
 #define CLIENTS_PER_MACHINE_ 5
 #define CLIENTS_PER_MACHINE (ENABLE_CLIENTS ? CLIENTS_PER_MACHINE_ : 0)
@@ -139,11 +146,12 @@ typedef struct key mica_key_t;
 //-------------------------------------------
 /* ----------TRACE------------------------ */
 //-------------------------------------------
-#define WRITE_RATIO 1000 //Warning write ratio is given out of a 1000, e.g 10 means 10/1000 i.e. 1%
-#define SC_RATIO 500// this is out of 1000, e.g. 10 means 1%
+
+
+#define SC_RATIO 1000// this is out of 1000, e.g. 10 means 1%
 #define ENABLE_RELEASES (1 && COMPILED_SYSTEM == kite_sys)
 #define ENABLE_ACQUIRES (1 && COMPILED_SYSTEM == kite_sys)
-#define RMW_RATIO 400// this is out of 1000, e.g. 10 means 1%
+
 #define ENABLE_RMWS (1 && COMPILED_SYSTEM == kite_sys)
 #define FEED_FROM_TRACE 0 // used to enable skew++
 // RMW TRACE
@@ -153,8 +161,8 @@ typedef struct key mica_key_t;
 #define ALL_RMWS_SINGLE_KEY 0 //  all threads do only rmws to one key (0)
 #define RMW_ONE_KEY_PER_THREAD 0 // thread t_id rmws key t_id
 //#define RMW_ONE_KEY_PER_SESSION 1 // session id rmws key t_id
-#define TRACE_ONLY_CAS 1
-#define TRACE_ONLY_FA 0
+#define TRACE_ONLY_CAS 0
+#define TRACE_ONLY_FA 1
 #define TRACE_MIXED_RMWS 0
 #define TRACE_CAS_RATIO 500 // out of a 1000
 #define RMW_CAS_CANCEL_RATIO 400 // out of 1000
@@ -267,7 +275,6 @@ enum {
 	-----------------MULTICAST-------------------------
 --------------------------------------------------*/
 // Multicast defines are not used, but are kept them for possible extension
-#define ENABLE_MULTICAST_ 0
 #define ENABLE_MULTICAST ENABLE_MULTICAST_
 #define MULTICAST_TESTING_ 0
 #define MULTICAST_TESTING (ENABLE_MULTICAST == 1 ? MULTICAST_TESTING_ : 0)

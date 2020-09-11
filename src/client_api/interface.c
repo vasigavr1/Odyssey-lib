@@ -1,12 +1,8 @@
 //
-// Created by vasilis on 11/05/20.
+// Created by vasilis on 11/09/20.
 //
 
-#ifndef KITE_INTERFACE_H
-#define KITE_INTERFACE_H
-
-#include <city.h>
-#include "top.h"
+#include "interface.h"
 
 // API_OPCODE
 #define RLXD_READ_BLOCKING 1
@@ -35,7 +31,7 @@
  * --------------------------------------------------------------------------------------*/
 
 //
-static inline int check_inputs(uint16_t session_id, uint32_t key_id, uint8_t * value_to_read,
+static forceinline int check_inputs(uint16_t session_id, uint32_t key_id, uint8_t * value_to_read,
                                uint8_t * value_to_write, uint32_t val_len, uint8_t opcode) {
   if (session_id >= SESSIONS_PER_MACHINE)
     return ERROR_SESSION_T0O_BIG;
@@ -69,13 +65,13 @@ static inline int check_inputs(uint16_t session_id, uint32_t key_id, uint8_t * v
   return 1;
 }
 
-static inline void check_push_pull_ptrs(uint16_t session_id)
+static forceinline void check_push_pull_ptrs(uint16_t session_id)
 {
   if (ENABLE_ASSERTIONS)
     assert(last_pushed_req[session_id] - last_pulled_req[session_id] == PER_SESSION_REQ_NUM);
 }
 //
-static inline void fill_client_op(client_op_t *cl_op, uint32_t key_id, uint8_t type,
+static forceinline void fill_client_op(client_op_t *cl_op, uint32_t key_id, uint8_t type,
                                   uint8_t *value_to_read, uint8_t *value_to_write, uint32_t val_len,
                                   bool *cas_result, bool weak)
 
@@ -118,24 +114,12 @@ static inline void fill_client_op(client_op_t *cl_op, uint32_t key_id, uint8_t t
   memcpy(&cl_op->key, &key_hash, KEY_SIZE);
 }
 
-// fill the replies // TODO Probably needs to be DEPRICATED
-static inline void check_return_values(client_op_t *cl_op)
-{
-  switch (cl_op->opcode) {
-    case KVS_OP_PUT:
-      if (ENABLE_ASSERTIONS) {
-        assert(cl_op->val_len <= VALUE_SIZE);
-        memset(cl_op->value_to_write, 255, cl_op->val_len);
-      }
-    default : return;
-  }
-}
 
 
 /* ----------------------------------POLLING API-----------------------------------------------*/
 
 //
-static inline uint64_t poll(uint16_t session_id)
+static forceinline uint64_t poll(uint16_t session_id)
 {
   uint16_t wrkr = (uint16_t) (session_id / SESSIONS_PER_THREAD);
   uint16_t s_i = (uint16_t) (session_id % SESSIONS_PER_THREAD);
@@ -148,7 +132,6 @@ static inline uint64_t poll(uint16_t session_id)
       my_printf(green, "Client  pulling req from worker %u for session %u, slot %u, last_pulled %u \n",
                 wrkr, s_i, pull_ptr, last_pulled_req[session_id]);
 
-    check_return_values(pull_clt_op);
     atomic_store_explicit(&pull_clt_op->state, (uint8_t) INVALID_REQ, memory_order_relaxed);
     check_state_with_allowed_flags(2, push_clt_op->state, INVALID_REQ);
     MOD_INCR(interface[wrkr].clt_pull_ptr[s_i], PER_SESSION_REQ_NUM);
@@ -158,26 +141,26 @@ static inline uint64_t poll(uint16_t session_id)
 }
 
 // Blocking call
-static inline void poll_all_reqs(uint16_t session_id)
+forceinline void poll_all_reqs(uint16_t session_id)
 {
   while(poll(session_id) < last_pushed_req[session_id]);
 }
 
 // returns whether it managed to poll a request
-static inline bool poll_a_req_async(uint16_t session_id, uint64_t target)
+forceinline bool poll_a_req_async(uint16_t session_id, uint64_t target)
 {
   return poll(session_id) >= target;
 }
 
 // returns after it managed to poll a request
-static inline void poll_a_req_blocking(uint16_t session_id, uint64_t target)
+forceinline void poll_a_req_blocking(uint16_t session_id, uint64_t target)
 {
   if (last_pulled_req[session_id] >= target) return;
   while (poll(session_id) < target);
 }
 
 // Blocks until it can poll one request. Useful when you need to issue a request
-static inline void poll_one_req_blocking(uint16_t session_id)
+forceinline void poll_one_req_blocking(uint16_t session_id)
 {
   uint64_t largest_polled = last_pulled_req[session_id];
   while (poll(session_id) <= largest_polled);
@@ -190,14 +173,14 @@ static inline void poll_one_req_blocking(uint16_t session_id)
   }
 }
 
-static inline bool is_polled(uint16_t session_id, uint64_t target)
+forceinline bool is_polled(uint16_t session_id, uint64_t target)
 {
   return  last_pulled_req[session_id] >= target;
 }
 
 /* ----------------------------------SYNC & ASYNC-----------------------------------------------*/
 //
-static inline int access_blocking(uint32_t key_id, uint8_t *value_to_read,
+static forceinline int access_blocking(uint32_t key_id, uint8_t *value_to_read,
                                   uint8_t *value_to_write, uint32_t val_len, bool *cas_result,
                                   bool rmw_is_weak, uint16_t session_id, uint8_t type)
 {
@@ -235,7 +218,7 @@ static inline int access_blocking(uint32_t key_id, uint8_t *value_to_read,
 }
 
 //
-static inline int access_async(uint32_t key_id, uint8_t *value_to_read,
+static forceinline int access_async(uint32_t key_id, uint8_t *value_to_read,
                                uint8_t *value_to_write, uint32_t val_len, bool *cas_result,
                                bool rmw_is_weak, bool strong,
                                uint16_t session_id, uint8_t type)
@@ -296,16 +279,16 @@ static inline int access_async(uint32_t key_id, uint8_t *value_to_read,
 // Async strong functions will block until the request is *issued* (i.e. block polling for a free slot)
 
 //
-static inline int async_read_strong(uint32_t key_id, uint8_t *value_to_read,
-                                    uint32_t val_len, uint16_t session_id)
+forceinline int async_read_strong(uint32_t key_id, uint8_t *value_to_read,
+                             uint32_t val_len, uint16_t session_id)
 {
   return access_async((uint32_t) key_id, value_to_read, NULL, val_len, NULL,
                       false, true, session_id, RLXD_READ_BLOCKING);
 }
 
 //
-static inline int async_write_strong(uint32_t key_id, uint8_t *value_to_write,
-                                     uint32_t val_len, uint16_t session_id)
+forceinline int async_write_strong(uint32_t key_id, uint8_t *value_to_write,
+                              uint32_t val_len, uint16_t session_id)
 {
 
   return access_async((uint32_t) key_id, NULL, value_to_write, val_len,
@@ -313,16 +296,16 @@ static inline int async_write_strong(uint32_t key_id, uint8_t *value_to_write,
 }
 
 //
-static inline int async_acquire_strong(uint32_t key_id, uint8_t *value_to_read,
-                                       uint32_t val_len, uint16_t session_id)
+forceinline int async_acquire_strong(uint32_t key_id, uint8_t *value_to_read,
+                                uint32_t val_len, uint16_t session_id)
 {
   return access_async((uint32_t) key_id, value_to_read, NULL, val_len,
                       NULL, false, true, session_id, ACQUIRE_BLOCKING);
 }
 
 //
-static inline int async_release_strong(uint32_t key_id, uint8_t *value_to_write,
-                                       uint32_t val_len, uint16_t session_id)
+forceinline int async_release_strong(uint32_t key_id, uint8_t *value_to_write,
+                                uint32_t val_len, uint16_t session_id)
 {
 
   return access_async((uint32_t) key_id, NULL, value_to_write, val_len,
@@ -330,19 +313,19 @@ static inline int async_release_strong(uint32_t key_id, uint8_t *value_to_write,
 }
 
 //
-static inline int async_cas_strong(uint32_t key_id, uint8_t *expected_val,
-                                   uint8_t *desired_val, uint32_t val_len,
-                                   bool *cas_result, bool rmw_is_weak,
-                                   uint16_t session_id)
+forceinline int async_cas_strong(uint32_t key_id, uint8_t *expected_val,
+                            uint8_t *desired_val, uint32_t val_len,
+                            bool *cas_result, bool rmw_is_weak,
+                            uint16_t session_id)
 {
   return access_async((uint32_t) key_id, expected_val, desired_val, val_len,
                       cas_result, rmw_is_weak, true, session_id, CAS_BLOCKING);
 }
 
 //
-static inline int async_faa_strong(uint32_t key_id, uint8_t *value_to_read,
-                                   uint8_t *argument_val, uint32_t val_len,
-                                   uint16_t session_id)
+forceinline int async_faa_strong(uint32_t key_id, uint8_t *value_to_read,
+                            uint8_t *argument_val, uint32_t val_len,
+                            uint16_t session_id)
 {
   return access_async((uint32_t) key_id, value_to_read, argument_val, val_len,
                       NULL, false, true, session_id, FAA_BLOCKING);
@@ -351,16 +334,16 @@ static inline int async_faa_strong(uint32_t key_id, uint8_t *value_to_read,
 // Async weak functions will not block, but may return that the request was not issued
 
 //
-static inline int async_read_weak(uint32_t key_id, uint8_t *value_to_read,
-                                  uint32_t val_len, uint16_t session_id)
+forceinline int async_read_weak(uint32_t key_id, uint8_t *value_to_read,
+                           uint32_t val_len, uint16_t session_id)
 {
   return access_async((uint32_t) key_id, value_to_read, NULL, val_len,
                       NULL, false, false, session_id, RLXD_READ_BLOCKING);
 }
 
 //
-static inline int async_write_weak(uint32_t key_id, uint8_t *value_to_write,
-                                   uint32_t val_len, uint16_t session_id)
+forceinline int async_write_weak(uint32_t key_id, uint8_t *value_to_write,
+                            uint32_t val_len, uint16_t session_id)
 {
 
   return access_async((uint32_t) key_id, NULL, value_to_write, val_len,
@@ -368,16 +351,16 @@ static inline int async_write_weak(uint32_t key_id, uint8_t *value_to_write,
 }
 
 //
-static inline int async_acquire_weak(uint32_t key_id, uint8_t *value_to_read,
-                                     uint32_t val_len, uint16_t session_id)
+forceinline int async_acquire_weak(uint32_t key_id, uint8_t *value_to_read,
+                              uint32_t val_len, uint16_t session_id)
 {
   return access_async((uint32_t) key_id, value_to_read, NULL, val_len,
                       NULL, false, false, session_id, ACQUIRE_BLOCKING);
 }
 
 //
-static inline int async_release_weak(uint32_t key_id, uint8_t *value_to_write,
-                                     uint32_t val_len, uint16_t session_id)
+forceinline int async_release_weak(uint32_t key_id, uint8_t *value_to_write,
+                              uint32_t val_len, uint16_t session_id)
 {
 
   return access_async((uint32_t) key_id, NULL, value_to_write, val_len,
@@ -385,19 +368,19 @@ static inline int async_release_weak(uint32_t key_id, uint8_t *value_to_write,
 }
 
 //
-static inline int async_cas_weak(uint32_t key_id, uint8_t *expected_val,
-                                 uint8_t *desired_val, uint32_t val_len,
-                                 bool *cas_result, bool rmw_is_weak,
-                                 uint16_t session_id)
+forceinline int async_cas_weak(uint32_t key_id, uint8_t *expected_val,
+                          uint8_t *desired_val, uint32_t val_len,
+                          bool *cas_result, bool rmw_is_weak,
+                          uint16_t session_id)
 {
   return access_async((uint32_t) key_id, expected_val, desired_val, val_len,
                       cas_result, rmw_is_weak, false, session_id, CAS_BLOCKING);
 }
 
 //
-static inline int async_faa_weak(uint32_t key_id, uint8_t *value_to_read,
-                                 uint8_t *argument_val, uint32_t val_len,
-                                 uint16_t session_id)
+forceinline int async_faa_weak(uint32_t key_id, uint8_t *value_to_read,
+                          uint8_t *argument_val, uint32_t val_len,
+                          uint16_t session_id)
 {
   return access_async((uint32_t) key_id, value_to_read, argument_val, val_len,
                       NULL, false, false, session_id, FAA_BLOCKING);
@@ -410,16 +393,16 @@ static inline int async_faa_weak(uint32_t key_id, uint8_t *value_to_read,
  * --------------------------------------------------------------------------------------*/
 
 //
-static inline int blocking_read(uint32_t key_id, uint8_t *value_to_read,
-                                uint32_t val_len, uint16_t session_id)
+forceinline int blocking_read(uint32_t key_id, uint8_t *value_to_read,
+                         uint32_t val_len, uint16_t session_id)
 {
   return access_blocking((uint32_t) key_id, value_to_read, NULL, val_len,
                          NULL, false, session_id, RLXD_READ_BLOCKING);
 }
 
 //
-static inline int blocking_write(uint32_t key_id, uint8_t *value_to_write,
-                                 uint32_t val_len, uint16_t session_id)
+forceinline int blocking_write(uint32_t key_id, uint8_t *value_to_write,
+                          uint32_t val_len, uint16_t session_id)
 {
 
   return access_blocking((uint32_t) key_id, NULL, value_to_write, val_len,
@@ -427,16 +410,16 @@ static inline int blocking_write(uint32_t key_id, uint8_t *value_to_write,
 }
 
 //
-static inline int blocking_acquire(uint32_t key_id, uint8_t *value_to_read,
-                                   uint32_t val_len, uint16_t session_id)
+forceinline int blocking_acquire(uint32_t key_id, uint8_t *value_to_read,
+                            uint32_t val_len, uint16_t session_id)
 {
   return access_blocking((uint32_t) key_id, value_to_read, NULL, val_len,
                          NULL, false, session_id, ACQUIRE_BLOCKING);
 }
 
 //
-static inline int blocking_release(uint32_t key_id, uint8_t *value_to_write,
-                                   uint32_t val_len, uint16_t session_id)
+forceinline int blocking_release(uint32_t key_id, uint8_t *value_to_write,
+                            uint32_t val_len, uint16_t session_id)
 {
 
   return access_blocking((uint32_t) key_id, NULL, value_to_write, val_len,
@@ -444,19 +427,19 @@ static inline int blocking_release(uint32_t key_id, uint8_t *value_to_write,
 }
 
 //
-static inline int blocking_cas(uint32_t key_id, uint8_t *expected_val,
-                               uint8_t *desired_val, uint32_t val_len,
-                               bool *cas_result, bool rmw_is_weak,
-                               uint16_t session_id)
+forceinline int blocking_cas(uint32_t key_id, uint8_t *expected_val,
+                        uint8_t *desired_val, uint32_t val_len,
+                        bool *cas_result, bool rmw_is_weak,
+                        uint16_t session_id)
 {
   return access_blocking((uint32_t) key_id, expected_val, desired_val, val_len,
                          cas_result, rmw_is_weak, session_id, CAS_BLOCKING);
 }
 
 //
-static inline int blocking_faa(uint32_t key_id, uint8_t *value_to_read,
-                               uint8_t *argument_val, uint32_t val_len,
-                               uint16_t session_id)
+forceinline int blocking_faa(uint32_t key_id, uint8_t *value_to_read,
+                        uint8_t *argument_val, uint32_t val_len,
+                        uint16_t session_id)
 {
   return access_blocking((uint32_t) key_id, value_to_read, argument_val, val_len,
                          NULL, false, session_id, FAA_BLOCKING);
@@ -467,7 +450,7 @@ static inline int blocking_faa(uint32_t key_id, uint8_t *value_to_read,
 /* ------------------------------------USER INTERFACE----------------------------------------------------------------- */
 /* ------------------------------------------------------------------------------------------------------------------- */
 // allow the user to check the API from the console
-static inline void user_interface()
+forceinline void user_interface()
 {
   uint8_t expected_val[VALUE_SIZE] = {0};
   uint8_t desired_val[VALUE_SIZE] = {0};
@@ -557,8 +540,3 @@ static inline void user_interface()
 
   }
 }
-
-
-
-
-#endif //KITE_INTERFACE_H

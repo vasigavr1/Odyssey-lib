@@ -3,8 +3,8 @@
 //
 
 #include <latency_util.h>
-#include "interface.h"
-#include "trace_util.h"
+#include "../../include/client_api/interface.h"
+#include "../../include/trace/trace_util.h"
 #include "kvs.h"
 
 

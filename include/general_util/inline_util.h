@@ -5,7 +5,7 @@
 #ifndef INLINE_UTIL_H
 #define INLINE_UTIL_H
 
-#include "client_if_util.h"
+#include "wrkr_side_calls.h"
 #include "debug_util.h"
 #include "latency_util.h"
 #include "rdma_gen_util.h"
@@ -13,7 +13,7 @@
 #include "config_util.h"
 #include "netw_func.h"
 #include "network_context.h"
-#include "fifo.h"
+#include "../fifo/fifo.h"
 #include "multicast.h"
 
 

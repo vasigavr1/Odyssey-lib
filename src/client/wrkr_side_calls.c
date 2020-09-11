@@ -1,16 +1,15 @@
 //
-// Created by vasilis on 11/05/20.
+// Created by vasilis on 11/09/20.
 //
 
-#ifndef KITE_CLIENT_IF_UTIL_H
-#define KITE_CLIENT_IF_UTIL_H
+#include "wrkr_side_calls.h"
 
-#include "debug_util.h"
 
 /*-------------------------------- CLIENT REQUEST ARRAY ----------------------------------------*/
 // signal completion of a request to the client
-static inline void signal_completion_to_client(uint32_t sess_id,
-                                               uint32_t req_array_i, uint16_t t_id)
+forceinline void signal_completion_to_client(uint32_t sess_id,
+                                             uint32_t req_array_i,
+                                             uint16_t t_id)
 {
   if (ENABLE_CLIENTS) {
     client_op_t *req_array = &interface[t_id].req_array[sess_id][req_array_i];
@@ -34,8 +33,9 @@ static inline void signal_completion_to_client(uint32_t sess_id,
 }
 
 // signal that the request is being processed to tne client
-static inline void signal_in_progress_to_client(uint32_t sess_id,
-                                                uint32_t req_array_i, uint16_t t_id)
+forceinline void signal_in_progress_to_client(uint32_t sess_id,
+                                              uint32_t req_array_i,
+                                              uint16_t t_id)
 {
   if (ENABLE_CLIENTS) {
     client_op_t *req_array = &interface[t_id].req_array[sess_id][req_array_i];
@@ -49,8 +49,9 @@ static inline void signal_in_progress_to_client(uint32_t sess_id,
 }
 
 // Returns whether a certain request is active, i.e. if the client has issued a request in a slot
-static inline bool is_client_req_active(uint32_t sess_id,
-                                        uint32_t req_array_i, uint16_t t_id)
+forceinline bool is_client_req_active(uint32_t sess_id,
+                                      uint32_t req_array_i,
+                                      uint16_t t_id)
 {
   client_op_t * req_array = &interface[t_id].req_array[sess_id][req_array_i];
   check_session_id_and_req_array_index((uint16_t) sess_id, (uint16_t) req_array_i, t_id);
@@ -58,7 +59,9 @@ static inline bool is_client_req_active(uint32_t sess_id,
 }
 
 // is any request of the client request array active
-static inline bool any_request_active(uint16_t sess_id, uint32_t req_array_i, uint16_t t_id)
+forceinline bool any_request_active(uint16_t sess_id,
+                                    uint32_t req_array_i,
+                                    uint16_t t_id)
 {
   for (uint32_t i = 0; i < PER_SESSION_REQ_NUM; i++) {
     if (is_client_req_active(sess_id, i, t_id)) {
@@ -72,8 +75,9 @@ static inline bool any_request_active(uint16_t sess_id, uint32_t req_array_i, ui
 }
 
 //
-static inline void fill_req_array_when_after_rmw(uint16_t sess_id, uint32_t req_array_i, uint8_t  opcode,
-                                                 uint8_t* value_to_read, bool rmw_is_successful, uint16_t t_id)
+forceinline void fill_req_array_when_after_rmw(uint16_t sess_id, uint32_t req_array_i,
+                                               uint8_t  opcode, uint8_t* value_to_read,
+                                               bool rmw_is_successful, uint16_t t_id)
 {
 
   if (ENABLE_CLIENTS) {
@@ -113,8 +117,8 @@ static inline void fill_req_array_when_after_rmw(uint16_t sess_id, uint32_t req_
   }
 }
 
-static inline void fill_req_array_on_rmw_early_fail(uint32_t sess_id, uint8_t* value_to_read,
-                                                    uint32_t req_array_i, uint16_t t_id)
+forceinline void fill_req_array_on_rmw_early_fail(uint32_t sess_id, uint8_t* value_to_read,
+                                                  uint32_t req_array_i, uint16_t t_id)
 {
   if (ENABLE_CLIENTS) {
     if (ENABLE_ASSERTIONS) {
@@ -129,8 +133,9 @@ static inline void fill_req_array_on_rmw_early_fail(uint32_t sess_id, uint8_t* v
 
 
 // Returns true if it's valid to pull a request for that session
-static inline bool pull_request_from_this_session(bool stalled, uint16_t sess_i,
-                                                  uint16_t t_id)
+forceinline bool pull_request_from_this_session(bool stalled,
+                                                uint16_t sess_i,
+                                                uint16_t t_id)
 {
   uint32_t pull_ptr = interface[t_id].wrkr_pull_ptr[sess_i];
   if (ENABLE_ASSERTIONS) {
@@ -144,9 +149,3 @@ static inline bool pull_request_from_this_session(bool stalled, uint16_t sess_i,
   else
     return (!stalled);
 }
-
-
-
-
-
-#endif //KITE_CLIENT_IF_UTIL_H
