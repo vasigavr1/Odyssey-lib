@@ -2,38 +2,7 @@
 // Created by vasilis on 20/08/20.
 //
 
-#ifdef KITE
-  #include "util.h"
-  #include "kite_inline_util.h"
-  #define appl_init_qp_meta kite_init_qp_meta
-  #define set_up_appl_ctx set_up_pending_ops
-  #define main_loop main_loop
-#endif
-
-#ifdef ZOOKEEPER
-  #include "zk_util.h"
-  #include "zk_inline_util.h"
-
-  #define appl_init_qp_meta zk_init_qp_meta
-  #define set_up_appl_ctx set_up_zk_ctx
-  #define main_loop main_loop
-#endif
-
-#ifdef DERECHO
-  #include "dr_inline_util.h"
-  #include "dr_util.h"
-  #define appl_init_qp_meta dr_init_qp_meta
-  #define set_up_appl_ctx set_up_dr_ctx
-  #define main_loop main_loop
-#endif
-
-#ifdef HERMES
-  #include "hr_inline_util.h"
-  #include "hr_util.h"
-  #define appl_init_qp_meta hr_init_qp_meta
-  #define set_up_appl_ctx set_up_hr_ctx
-  #define main_loop main_loop
-#endif
+#include "wrkr_prot_sel.h"
 
 #include "init_connect.h"
 

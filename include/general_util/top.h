@@ -34,40 +34,7 @@
 #include <stdatomic.h>
 #include <stdbool.h>
 
-
-typedef enum {error_sys, kite_sys = 141, zookeeper_sys = 142, derecho_sys, hermes_sys} system_t;
-
-//#define COMPILED_SYSTEM zookeeper_sys
-
-
-
-#ifdef KITE
-  #define COMPILED_SYSTEM kite_sys
-#endif
-
-#ifdef ZOOKEEPER
-#define COMPILED_SYSTEM zookeeper_sys
-#endif
-
-#ifdef DERECHO
-  #define COMPILED_SYSTEM derecho_sys
-#endif
-
-#ifdef HERMES
-#define COMPILED_SYSTEM hermes_sys
-#endif
-
-///Default for the IDE
-#ifndef KITE
-  #ifndef ZOOKEEPER
-    #ifndef DERECHO
-      #ifndef HERMES
-        #define ZOOKEPER
-        #define COMPILED_SYSTEM zookeeper_sys
-      #endif
-    #endif
-  #endif
-#endif
+#include "top_prot_sel.h"
 
 
 
@@ -109,7 +76,7 @@ typedef struct key mica_key_t;
 
 #define WORKERS_PER_MACHINE 10
 #define SESSIONS_PER_THREAD 64
-#define WRITE_RATIO 10 //Warning write ratio is given out of a 1000, e.g 10 means 10/1000 i.e. 1%
+#define WRITE_RATIO 1000 //Warning write ratio is given out of a 1000, e.g 10 means 10/1000 i.e. 1%
 #define RMW_RATIO 10// this is out of 1000, e.g. 10 means 1%
 #define ENABLE_MULTICAST_ 0
 
@@ -119,7 +86,7 @@ typedef struct key mica_key_t;
 #define CLIENTS_PER_MACHINE (ENABLE_CLIENTS ? CLIENTS_PER_MACHINE_ : 0)
 #define ENABLE_LOCK_FREE_READING 1
 
-#define ENABLE_ASSERTIONS 0
+#define ENABLE_ASSERTIONS 1
 
 #define PUT_A_MACHINE_TO_SLEEP 0
 #define MACHINE_THAT_SLEEPS 1
@@ -188,7 +155,7 @@ typedef struct key mica_key_t;
 -----------------DEBUGGING-------------------------
 --------------------------------------------------*/
 //It may be that ENABLE_ASSERTIONS  must be up for these to work
-#define DEBUG_PREPARES 0
+#define DEBUG_PREPARES 1
 #define DEBUG_COMMITS 0
 #define DEBUG_WRITES 0
 #define DEBUG_ACKS 0

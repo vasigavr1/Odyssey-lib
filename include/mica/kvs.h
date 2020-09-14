@@ -11,31 +11,7 @@
 #include "wrkr_side_calls.h"
 #include <debug_util.h>
 
-#ifdef KITE
-  #include "config.h"
-#endif
-
-#ifdef DERECHO
-	#include "dr_config.h"
-#endif
-
-#ifdef ZOOKEEPER
-  #include "zk_config.h"
-#endif
-
-#ifdef HERMES
-#include "hr_config.h"
-#endif
-
-#ifndef KITE
-  #ifndef ZOOKEEPER
-  	#ifndef DERECHO
-    	#ifndef HERMES
-    		#include "zk_config.h"
-    	#endif
-		#endif
-  #endif
-#endif
+#include "kvs_prot_sel.h"
 
 #define KVS_NUM_BKTS (8 * 1024 * 1024)
 #define KVS_LOG_CAP  (1024 * 1024 * 1024)

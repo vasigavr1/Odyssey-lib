@@ -2,28 +2,8 @@
 // Created by vasilis on 20/08/20.
 //
 
-#ifdef ZOOKEEPER
-  #include "zk_util.h"
-  #define appl_stats zk_stats
-#endif
 
-#ifdef KITE
-
-#include <latency_util.h>
-#include "util.h"
-  #define appl_stats kite_stats
-#endif
-
-#ifdef DERECHO
-  #include "dr_util.h"
-  #define appl_stats dr_stats
-#endif
-
-#ifdef HERMES
-  #include "hr_util.h"
-  #define appl_stats hr_stats
-#endif
-
+#include "stats_prot_sel.h"
 #include "latency_util.h"
 
 void print_latency_stats(void);
