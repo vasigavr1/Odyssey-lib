@@ -19,11 +19,12 @@ void ctx_refill_recvs(context_t *ctx,
 //---------------------------------------------------------------------------*/
 
 void ctx_insert_mes(context_t *ctx, uint16_t qp_id,
-                           uint32_t send_size,
-                           uint32_t recv_size,
-                           bool break_message,
-                           void* source,
-                           uint32_t source_flag);
+                    uint32_t send_size,
+                    uint32_t recv_size,
+                    bool break_message,
+                    void* source,
+                    uint32_t source_flag,
+                    uint16_t fifo_i);
 
 /* ---------------------------------------------------------------------------
 //------------------------------ BROADCASTS --------------------------------

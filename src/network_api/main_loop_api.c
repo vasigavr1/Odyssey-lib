@@ -22,10 +22,11 @@ forceinline void ctx_insert_mes(context_t *ctx, uint16_t qp_id,
                                 uint32_t recv_size,
                                 bool break_message,
                                 void* source,
-                                uint32_t source_flag)
+                                uint32_t source_flag,
+                                uint16_t fifo_i)
 {
   per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_id];
-  fifo_t* send_fifo = qp_meta->send_fifo;
+  fifo_t* send_fifo = &qp_meta->send_fifo[fifo_i];
   void *ptr = get_send_fifo_ptr(send_fifo, send_size, recv_size,
                                 break_message, ctx->t_id);
 
@@ -167,35 +168,33 @@ inline void ctx_send_unicasts(context_t *ctx,
   struct ibv_send_wr *bad_send_wr;
   uint16_t mes_i = 0;
   per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_id];
-  fifo_t *send_fifo = qp_meta->send_fifo;
+  for (uint16_t fifo_i = 0; fifo_i < qp_meta->send_fifo_num; ++fifo_i) {
+    fifo_t *send_fifo = &qp_meta->send_fifo[fifo_i];
+    while (ctx_can_send_unicasts(qp_meta)) {
+      if (qp_meta->mfs->send_helper != NULL)
+        qp_meta->mfs->send_helper(ctx);
 
+      ctx_forge_unicast_wr(ctx, qp_id, mes_i);
 
-  while (ctx_can_send_unicasts(qp_meta)) {
+      fifo_send_from_pull_slot(send_fifo);
 
+      // Credit management
+      if (qp_meta->needs_credits)
+        (*qp_meta->credits)--;
+      mes_i++;
+    }
 
-    if (qp_meta->mfs->send_helper != NULL)
-      qp_meta->mfs->send_helper(ctx);
-
-    ctx_forge_unicast_wr(ctx, qp_id, mes_i);
-
-    fifo_send_from_pull_slot(send_fifo);
-
-    // Credit management
-    if (qp_meta->needs_credits)
-      (*qp_meta->credits)--;
-    mes_i++;
-  }
-
-  if (mes_i > 0) {
-    if (qp_meta->recv_wr_num > qp_meta->recv_info->posted_recvs)
-      post_recvs_with_recv_info(qp_meta->recv_info,
-                                qp_meta->recv_wr_num - qp_meta->recv_info->posted_recvs);
-    //printf("Mes_i %u length %u, address %p/ %p \n", mes_i, qp_meta->send_wr[0].sg_list->length,
-    //       (void *) qp_meta->send_wr->sg_list->addr, send_fifo->fifo);
-    qp_meta->send_wr[mes_i - 1].next = NULL;
-    ctx_check_unicast_before_send(ctx, qp_meta->leader_m_id, qp_id);
-    int ret = ibv_post_send(qp_meta->send_qp, qp_meta->send_wr, &bad_send_wr);
-    CPE(ret, "Unicast ibv_post_send error", ret);
+    if (mes_i > 0) {
+      if (qp_meta->recv_wr_num > qp_meta->recv_info->posted_recvs)
+        post_recvs_with_recv_info(qp_meta->recv_info,
+                                  qp_meta->recv_wr_num - qp_meta->recv_info->posted_recvs);
+      //printf("Mes_i %u length %u, address %p/ %p \n", mes_i, qp_meta->send_wr[0].sg_list->length,
+      //       (void *) qp_meta->send_wr->sg_list->addr, send_fifo->fifo);
+      qp_meta->send_wr[mes_i - 1].next = NULL;
+      ctx_check_unicast_before_send(ctx, qp_meta->leader_m_id, qp_id);
+      int ret = ibv_post_send(qp_meta->send_qp, qp_meta->send_wr, &bad_send_wr);
+      CPE(ret, "Unicast ibv_post_send error", ret);
+    }
   }
 }
 

@@ -157,7 +157,7 @@ typedef struct key mica_key_t;
 //It may be that ENABLE_ASSERTIONS  must be up for these to work
 #define DEBUG_PREPARES 0
 #define DEBUG_COMMITS 0
-#define DEBUG_WRITES 0
+#define DEBUG_WRITES 1
 #define DEBUG_ACKS 0
 #define DEBUG_READS 0
 #define DEBUG_READ_REPS 0

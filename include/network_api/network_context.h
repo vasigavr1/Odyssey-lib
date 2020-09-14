@@ -27,7 +27,7 @@ typedef enum{
   SEND_CREDITS_LDR_RECV_NONE,
   RECV_CREDITS,
 
-  SEND_UNI_REQ_RECV_REP,
+  SEND_UNI_REQ_RECV_UNI_REQ,
   SEND_UNI_REP_RECV_UNI_REQ,
 
   SEND_UNI_REQ_RECV_LDR_REP,
@@ -93,7 +93,7 @@ typedef struct per_qp_meta {
   // send-recv fifos
   fifo_t *recv_fifo;
   fifo_t *send_fifo;
-  bool has_send_fifo;
+  uint16_t send_fifo_num;
   uint32_t recv_buf_size;
   uint32_t recv_buf_slot_num;
 

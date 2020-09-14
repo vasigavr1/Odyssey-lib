@@ -19,7 +19,7 @@ void allocate_work_requests(per_qp_meta_t* qp_meta)
       break;
     case RECV_CREDITS:
       break;
-    case SEND_UNI_REQ_RECV_REP:
+    case SEND_UNI_REQ_RECV_UNI_REQ:
     case SEND_UNI_REQ_RECV_LDR_REP:
     case SEND_UNI_REP_RECV_LDR_BCAST:
     case SEND_UNI_REP_TO_BCAST:
@@ -46,7 +46,7 @@ uint16_t get_credit_rows(per_qp_meta_t* qp_meta)
     case SEND_BCAST_LDR_RECV_UNI:
     case SEND_BCAST_RECV_UNI:
     case SEND_BCAST_RECV_BCAST:
-    case SEND_UNI_REQ_RECV_REP:
+    case SEND_UNI_REQ_RECV_UNI_REQ:
     case SEND_UNI_REP_TO_BCAST:
     case SEND_UNI_REP_RECV_UNI_REQ:
     case SEND_UNI_REP_RECV_UNI_REP:
@@ -76,7 +76,7 @@ void qp_meta_ss_batch_q_depth(per_qp_meta_t* qp_meta)
     case RECV_CREDITS:
       break;
     case SEND_CREDITS_LDR_RECV_NONE:
-    case SEND_UNI_REQ_RECV_REP:
+    case SEND_UNI_REQ_RECV_UNI_REQ:
     case SEND_UNI_REQ_RECV_LDR_REP:
     case SEND_UNI_REP_RECV_LDR_BCAST:
     case SEND_UNI_REP_TO_BCAST:
@@ -177,13 +177,14 @@ void create_per_qp_meta(per_qp_meta_t *qp_meta,
   qp_meta->recv_fifo->slot_size = recv_size;
 
   if (send_fifo_slot_num > 0) {
-    qp_meta->has_send_fifo = true;
-    if (ENABLE_ASSERTIONS) printf("Setting up a send_fifo with %u slots, %u size\n",
-                                  send_fifo_slot_num, send_size);
+    qp_meta->send_fifo_num = (uint16_t) (flow_type == SEND_UNI_REQ_RECV_UNI_REQ ? receipient_num : 1);
+    if (ENABLE_ASSERTIONS) printf("Setting up %u send_fifo(s) with %u slots, %u size\n",
+                                  qp_meta->send_fifo_num, send_fifo_slot_num, send_size);
     qp_meta->send_fifo = fifo_constructor(send_fifo_slot_num,
-                                          send_size, true, mes_header, 1);
+                                          send_size, true, mes_header,
+                                          qp_meta->send_fifo_num);
   }
-  else qp_meta->has_send_fifo = false;
+  else qp_meta->send_fifo_num = 0;
   allocate_work_requests(qp_meta);
   if (qp_meta->mfs == NULL) qp_meta->mfs = malloc(sizeof(mf_t));
 }

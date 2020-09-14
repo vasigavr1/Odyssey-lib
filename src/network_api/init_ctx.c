@@ -62,7 +62,7 @@ void init_ctx_send_mrs(context_t *ctx)
 {
   for (int qp_i = 0; qp_i < ctx->qp_num; ++qp_i) {
     per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_i];
-    if (!qp_meta->has_send_fifo) continue;
+    if (qp_meta->send_fifo_num == 0) continue;
     if (ENABLE_ASSERTIONS && ctx->t_id == 0)
       printf("Registering send fifo %p through %p, total %u bytes \n",
              qp_meta->send_fifo->fifo,
@@ -161,7 +161,7 @@ void init_ctx_send_wrs(context_t *ctx)
           const_set_up_wr(ctx, qp_i, wr_i, 0, true, qp_meta->leader_m_id);
         }
         break;
-      case SEND_UNI_REQ_RECV_REP:
+
       case SEND_UNI_REQ_RECV_LDR_REP:
       case SEND_UNI_REP_RECV_LDR_BCAST:
       case SEND_UNI_REP_TO_BCAST:
@@ -173,9 +173,10 @@ void init_ctx_send_wrs(context_t *ctx)
         break;
       case SEND_UNI_REP_RECV_UNI_REQ:
       case SEND_UNI_REP_RECV_UNI_REP:
+      case SEND_UNI_REQ_RECV_UNI_REQ:
       case SEND_ACK_RECV_ACK:
         for (uint16_t wr_i = 0; wr_i < qp_meta->send_wr_num; ++wr_i) {
-          uint16_t rm_id = wr_i % MACHINE_NUM; //qp_meta->receipient_num;
+          uint16_t rm_id = wr_i % MACHINE_NUM; //only useful for acks;
           //rm_id = (uint16_t) (rm_id < ctx->m_id ? rm_id : rm_id + 1);
           const_set_up_wr(ctx, qp_i, wr_i, wr_i, wr_i == qp_meta->send_wr_num - 1,
                           rm_id);
@@ -278,7 +279,7 @@ void set_up_ctx_mcast(context_t *ctx)
           break;
         case RECV_CREDITS:
         case SEND_CREDITS_LDR_RECV_NONE:
-        case SEND_UNI_REQ_RECV_REP:
+        case SEND_UNI_REQ_RECV_UNI_REQ:
         case SEND_UNI_REQ_RECV_LDR_REP:
         case SEND_UNI_REP_LDR_RECV_UNI_REQ:
         case SEND_UNI_REP_RECV_UNI_REQ:
