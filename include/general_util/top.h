@@ -74,9 +74,9 @@ typedef struct key mica_key_t;
 #define MACHINE_NUM 5
 
 
-#define WORKERS_PER_MACHINE 10
+#define WORKERS_PER_MACHINE 1
 #define SESSIONS_PER_THREAD 64
-#define WRITE_RATIO 1000 //Warning write ratio is given out of a 1000, e.g 10 means 10/1000 i.e. 1%
+#define WRITE_RATIO 500 //Warning write ratio is given out of a 1000, e.g 10 means 10/1000 i.e. 1%
 #define RMW_RATIO 10// this is out of 1000, e.g. 10 means 1%
 #define ENABLE_MULTICAST_ 0
 
@@ -155,7 +155,7 @@ typedef struct key mica_key_t;
 -----------------DEBUGGING-------------------------
 --------------------------------------------------*/
 //It may be that ENABLE_ASSERTIONS  must be up for these to work
-#define DEBUG_PREPARES 1
+#define DEBUG_PREPARES 0
 #define DEBUG_COMMITS 0
 #define DEBUG_WRITES 0
 #define DEBUG_ACKS 0

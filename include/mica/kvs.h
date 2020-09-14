@@ -161,6 +161,11 @@ static inline void KVS_local_read(mica_op_t *kv_ptr,
   *resp_type = KVS_LOCAL_GET_SUCCESS;
 }
 
-
+static inline void KVS_write(mica_op_t *kv_ptr, uint8_t *value_to_write)
+{
+	lock_seqlock(&kv_ptr->seqlock);
+		memcpy(kv_ptr->value, value_to_write, (size_t) VALUE_SIZE);
+	unlock_seqlock(&kv_ptr->seqlock);
+}
 
 #endif
