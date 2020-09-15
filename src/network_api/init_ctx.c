@@ -63,16 +63,21 @@ void init_ctx_send_mrs(context_t *ctx)
   for (int qp_i = 0; qp_i < ctx->qp_num; ++qp_i) {
     per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_i];
     if (qp_meta->send_fifo_num == 0) continue;
-    if (ENABLE_ASSERTIONS && ctx->t_id == 0)
-      printf("Registering send fifo %p through %p, total %u bytes \n",
-             qp_meta->send_fifo->fifo,
-             qp_meta->send_fifo->fifo +
-             qp_meta->send_fifo->max_byte_size,
-             qp_meta->send_fifo->max_byte_size);
-    qp_meta->send_mr = register_buffer(ctx->rdma_ctx->pd,
-                                       qp_meta->send_fifo->fifo,
-                                       qp_meta->send_fifo->max_byte_size);
-    if (ENABLE_ASSERTIONS && ctx->t_id == 0) printf("Qp_i %u, lkey %u \n", qp_i, qp_meta->send_mr->lkey);
+
+    for (int fifo_i = 0; fifo_i < qp_meta->send_fifo_num; ++fifo_i) {
+      void* start = qp_meta->send_fifo[fifo_i].fifo;
+      uint32_t size = qp_meta->send_fifo[fifo_i].max_byte_size;
+
+      if (ENABLE_ASSERTIONS && ctx->t_id == 0)
+        printf("Qp %u --%s--  Registering send fifo %p through %p, total %u bytes \n",
+               qp_i, qp_meta->send_string, start,
+               start + size,
+               size);
+
+      qp_meta->send_mr[fifo_i] = register_buffer(ctx->rdma_ctx->pd, start, size);
+      if (ENABLE_ASSERTIONS && ctx->t_id == 0)
+        printf("Qp_i %u, lkey %u \n",  qp_i, qp_meta->send_mr[fifo_i]->lkey);
+    }
   }
 }
 
@@ -131,7 +136,8 @@ void const_set_up_wr(context_t *ctx, uint16_t qp_i,
     assert(send_wr->sg_list->length == 0);
   if (qp_meta->enable_inlining) send_wr->send_flags = IBV_SEND_INLINE;
   else {
-    send_sgl->lkey = qp_meta->send_mr->lkey;
+    send_sgl->lkey = qp_meta->send_mr[0]->lkey;
+    //printf("lkey %u\n ", send_sgl->lkey);
     send_wr->send_flags = 0;
   }
   send_wr->next = last ? NULL : &send_wr[1];
@@ -447,7 +453,8 @@ context_t *create_ctx(uint8_t m_id, uint16_t t_id,
   ctx->qp_meta = calloc(qp_num, sizeof(per_qp_meta_t));
   ctx->local_ip = malloc(16);
   strcpy(ctx->local_ip, local_ip);
+  ctx->ctx_tmp = calloc(1, sizeof(ctx_tmp_t));
   if (!ENABLE_CLIENTS)
-    ctx->tmp_val = calloc(VALUE_SIZE, sizeof(uint8_t));
+    ctx->ctx_tmp->tmp_val = calloc(VALUE_SIZE, sizeof(uint8_t));
   return ctx;
 }

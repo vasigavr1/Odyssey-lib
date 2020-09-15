@@ -39,7 +39,7 @@ void ctx_send_broadcasts(context_t *ctx, uint16_t qp_id);
 
 
 void ctx_send_unicasts(context_t *ctx,
-                                    uint16_t qp_id);
+                       uint16_t qp_id);
 
 
 /* ---------------------------------------------------------------------------
@@ -54,23 +54,23 @@ void ctx_poll_incoming_messages(context_t *ctx, uint16_t qp_id);
 //---------------------------------------------------------------------------*/
 
 uint32_t ctx_find_when_the_ack_points_acked(ctx_ack_mes_t *ack,
-                                                   fifo_t *rob,
-                                                   uint64_t pull_lid,
-                                                   uint32_t *ack_num);
+                                            fifo_t *rob,
+                                            uint64_t pull_lid,
+                                            uint32_t *ack_num);
 
 ///
 void ctx_increase_credits_on_polling_ack(context_t *ctx,
-                                                uint16_t qp_id,
-                                                ctx_ack_mes_t *ack);
+                                         uint16_t qp_id,
+                                         ctx_ack_mes_t *ack);
 
 // Returns true if the insert is successful,
 // if not  (it's probably because the machine lost some messages)
 // the old ack needs to be sent, before we try again to insert
 bool ctx_ack_insert(context_t *ctx,
-                           uint16_t qp_id,
-                           uint8_t mes_num,
-                           uint64_t l_id,
-                           const uint8_t m_id);
+                    uint16_t qp_id,
+                    uint8_t mes_num,
+                    uint64_t l_id,
+                    const uint8_t m_id);
 
 
 

@@ -55,6 +55,7 @@ static inline void ctx_forge_bcast_wr(context_t *ctx,
   fifo_t *send_fifo = qp_meta->send_fifo;
   send_sgl[br_i].length = get_fifo_slot_meta_pull(send_fifo)->byte_size;
   send_sgl[br_i].addr = (uintptr_t) get_fifo_pull_slot(send_fifo);
+
   form_bcast_links(&qp_meta->sent_tx, qp_meta->ss_batch, ctx->q_info, br_i,
                    qp_meta->send_wr, qp_meta->send_cq, qp_meta->send_string, ctx->t_id);
 }
@@ -106,18 +107,29 @@ inline void ctx_send_broadcasts(context_t *ctx, uint16_t qp_id)
 
 static forceinline void ctx_forge_unicast_wr(context_t *ctx,
                                              uint16_t qp_id,
+                                             uint16_t fifo_i,
                                              uint16_t mes_i)
 {
   per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_id];
   struct ibv_sge *send_sgl = qp_meta->send_sgl;
   struct ibv_send_wr *send_wr = qp_meta->send_wr;
+  fifo_t *send_fifo = &qp_meta->send_fifo[fifo_i];
 
-  //printf("%u/%u \n", mes_i, MAX_R_REP_WRS);
-  send_sgl[mes_i].length = get_fifo_slot_meta_pull(qp_meta->send_fifo)->byte_size;
-  send_sgl[mes_i].addr = (uintptr_t) get_fifo_pull_slot(qp_meta->send_fifo);
+  if (ENABLE_ASSERTIONS)
+    assert(mes_i < qp_meta->send_wr_num);
+  //
+  send_sgl[mes_i].length = get_fifo_slot_meta_pull(send_fifo)->byte_size;
+  send_sgl[mes_i].addr = (uintptr_t) get_fifo_pull_slot(send_fifo);
+  send_sgl[mes_i].lkey = qp_meta->send_mr[fifo_i]->lkey;
+
+  //printf("%u/%p \n", send_sgl[mes_i].length, (void*)send_sgl[mes_i].addr );
 
   //if (qp_meta->receipient_num > 1) {
-  uint8_t rm_id = get_fifo_slot_meta_pull(qp_meta->send_fifo)->rm_id;
+  uint8_t rm_id = get_fifo_slot_meta_pull(send_fifo)->rm_id;
+  if (ENABLE_ASSERTIONS) {
+    assert(rm_id < MACHINE_NUM);
+    assert(rm_id != ctx->m_id);
+  }
   send_wr[mes_i].wr.ud.ah = rem_qp[rm_id][ctx->t_id][qp_id].ah;
   send_wr[mes_i].wr.ud.remote_qpn = (uint32_t) rem_qp[rm_id][ctx->t_id][qp_id].qpn;
   //}
@@ -132,9 +144,10 @@ static forceinline void ctx_forge_unicast_wr(context_t *ctx,
 }
 
 
-static forceinline bool ctx_can_send_unicasts (per_qp_meta_t *qp_meta)
+static forceinline bool ctx_can_send_unicasts (per_qp_meta_t *qp_meta,
+                                               uint16_t fifo_i)
 {
-  fifo_t *send_fifo = qp_meta->send_fifo;
+  fifo_t *send_fifo = &qp_meta->send_fifo[fifo_i];
   if (qp_meta->needs_credits)
     return send_fifo->capacity > 0 && *qp_meta->credits > 0;
   else return send_fifo->capacity > 0;
@@ -154,7 +167,7 @@ inline void ctx_check_unicast_before_send(context_t *ctx,
     assert(qp_meta->send_wr[0].opcode == IBV_WR_SEND);
     assert(qp_meta->send_wr[0].num_sge == 1);
     if (!qp_meta->enable_inlining) {
-      assert(qp_meta->send_wr[0].sg_list->lkey == qp_meta->send_mr->lkey);
+      //assert(qp_meta->send_wr[0].sg_list->lkey == qp_meta->send_mr->lkey);
       //assert(qp_meta->send_wr[0].send_flags == IBV_SEND_SIGNALED);
       assert(!qp_meta->enable_inlining);
     }
@@ -170,24 +183,28 @@ inline void ctx_send_unicasts(context_t *ctx,
   per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_id];
   for (uint16_t fifo_i = 0; fifo_i < qp_meta->send_fifo_num; ++fifo_i) {
     fifo_t *send_fifo = &qp_meta->send_fifo[fifo_i];
-    while (ctx_can_send_unicasts(qp_meta)) {
-      if (qp_meta->mfs->send_helper != NULL)
-        qp_meta->mfs->send_helper(ctx);
+    while (ctx_can_send_unicasts(qp_meta, fifo_i)) {
 
-      ctx_forge_unicast_wr(ctx, qp_id, mes_i);
+      if (qp_meta->mfs->send_helper != NULL) {
+        ctx->ctx_tmp->counter = (uint64_t) fifo_i;
+        qp_meta->mfs->send_helper(ctx);
+      }
+      ctx_forge_unicast_wr(ctx, qp_id, fifo_i, mes_i);
 
       fifo_send_from_pull_slot(send_fifo);
 
       // Credit management
       if (qp_meta->needs_credits)
-        (*qp_meta->credits)--;
+        (*qp_meta->credits)--; // TODO decrement the correct counter
       mes_i++;
     }
+  }
 
     if (mes_i > 0) {
-      if (qp_meta->recv_wr_num > qp_meta->recv_info->posted_recvs)
-        post_recvs_with_recv_info(qp_meta->recv_info,
-                                  qp_meta->recv_wr_num - qp_meta->recv_info->posted_recvs);
+      ctx_refill_recvs(ctx, qp_meta->recv_qp_id);
+      //if (qp_meta->recv_wr_num > qp_meta->recv_info->posted_recvs)
+      //  post_recvs_with_recv_info(qp_meta->recv_info,
+      //                            qp_meta->recv_wr_num - qp_meta->recv_info->posted_recvs);
       //printf("Mes_i %u length %u, address %p/ %p \n", mes_i, qp_meta->send_wr[0].sg_list->length,
       //       (void *) qp_meta->send_wr->sg_list->addr, send_fifo->fifo);
       qp_meta->send_wr[mes_i - 1].next = NULL;
@@ -195,7 +212,7 @@ inline void ctx_send_unicasts(context_t *ctx,
       int ret = ibv_post_send(qp_meta->send_qp, qp_meta->send_wr, &bad_send_wr);
       CPE(ret, "Unicast ibv_post_send error", ret);
     }
-  }
+
 }
 
 
@@ -448,7 +465,7 @@ forceinline void  ctx_fill_trace_op(context_t *ctx,
 {
   create_inputs_of_op(&op->value_to_write, &op->value_to_read, &op->real_val_len,
                       &op->opcode, &op->index_to_req_array,
-                      &op->key, ctx->tmp_val, trace_op, working_session, ctx->t_id);
+                      &op->key, ctx->ctx_tmp->tmp_val, trace_op, working_session, ctx->t_id);
 
   ctx_check_op(op);
 

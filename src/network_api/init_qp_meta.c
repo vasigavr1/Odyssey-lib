@@ -183,6 +183,7 @@ void create_per_qp_meta(per_qp_meta_t *qp_meta,
     qp_meta->send_fifo = fifo_constructor(send_fifo_slot_num,
                                           send_size, true, mes_header,
                                           qp_meta->send_fifo_num);
+    qp_meta->send_mr = calloc(qp_meta->send_fifo_num, sizeof(struct ibv_mr*));
   }
   else qp_meta->send_fifo_num = 0;
   allocate_work_requests(qp_meta);

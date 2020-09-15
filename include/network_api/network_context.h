@@ -68,7 +68,7 @@ typedef struct per_qp_meta {
   struct ibv_sge *recv_sgl;
   struct ibv_wc *recv_wc;
   struct ibv_recv_wr *recv_wr;
-  struct ibv_mr *send_mr;
+  struct ibv_mr **send_mr;
 
   uint32_t send_wr_num;
   uint32_t recv_wr_num;
@@ -134,6 +134,12 @@ typedef struct rdma_context {
   int dev_port_id;
 } rdma_context_t;
 
+typedef struct ctx_tmps {
+  uint64_t counter;
+  void *generic_ptr;
+  uint8_t *tmp_val;
+} ctx_tmp_t;
+
 
 typedef struct context {
   hrd_ctrl_blk_t *cb;
@@ -149,7 +155,8 @@ typedef struct context {
   rdma_context_t *rdma_ctx;
   char* local_ip;
   void* appl_ctx;
-  uint8_t *tmp_val;
+  ctx_tmp_t* ctx_tmp;
+
 
 
 } context_t;

@@ -167,9 +167,15 @@ static inline uint32_t poll_cq(struct ibv_cq *cq, int num_comps, struct ibv_wc *
     if(new_comps != 0) {
 //			 printf("I see completions %d\n", new_comps);
       /* Ideally, we should check from comps -> new_comps - 1 */
-      if(ENABLE_ASSERTIONS && wc[comps].status != 0) {
-        fprintf(stderr, "Bad wc status %d: %s\n", wc[comps].status, caller_flag);
-        assert(false);
+      if(ENABLE_ASSERTIONS) {
+        if (wc[comps].status != 0) {
+          fprintf(stderr, "Bad wc status %d: %s\n", wc[comps].status, caller_flag);
+          assert(false);
+        }
+        if (new_comps < 0) {
+          my_printf(red, "%s : error when polling send cq\n", caller_flag);
+          assert(false);
+        }
       }
       comps += new_comps;
     }
@@ -254,13 +260,14 @@ static inline void selective_signaling_for_unicast(uint64_t *tx, int ss_batch,
 
   struct ibv_wc signal_send_wc;
   if ((*tx) % ss_batch == 0) {
-    //printf("Send signaled %lu \n", *tx);
+    //printf("%s Send signaled %lu \n", mes, *tx);
     send_wr[mes_i].send_flags |= IBV_SEND_SIGNALED;
   }
 
   if ((*tx) % ss_batch == ss_batch - 1) {
+    //printf("%s Start polling \n", mes);
     poll_cq(dgram_send_cq, 1, &signal_send_wc, mes);
-    //printf("Polled the signaled %lu \n", *tx);
+    //printf("%s Polled the signaled %lu \n", mes, *tx);
   }
   (*tx)++;
 }
