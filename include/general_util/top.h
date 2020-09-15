@@ -74,9 +74,9 @@ typedef struct key mica_key_t;
 #define MACHINE_NUM 5
 
 
-#define WORKERS_PER_MACHINE 20
-#define SESSIONS_PER_THREAD 20
-#define WRITE_RATIO 500 //Warning write ratio is given out of a 1000, e.g 10 means 10/1000 i.e. 1%
+#define WORKERS_PER_MACHINE 35
+#define SESSIONS_PER_THREAD 64
+#define WRITE_RATIO 1000 //Warning write ratio is given out of a 1000, e.g 10 means 10/1000 i.e. 1%
 #define RMW_RATIO 10// this is out of 1000, e.g. 10 means 1%
 #define ENABLE_MULTICAST_ 0
 
