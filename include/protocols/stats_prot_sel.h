@@ -32,6 +32,10 @@
   #define appl_stats cht_stats
 #endif
 
+#ifdef CRAQ
+  #include "cr_util.h"
+  #define appl_stats cr_stats
+#endif
 
 
 #endif //ODYSSEY_STATS_PROT_SEL_H

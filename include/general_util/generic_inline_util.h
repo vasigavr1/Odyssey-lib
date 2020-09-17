@@ -158,6 +158,8 @@ static inline char *system_name()
     case zookeeper_sys: return "zookeeper_sys";
     case derecho_sys: return "derecho_sys";
     case hermes_sys: return "hermes_sys";
+    case cht_sys: return "cht_sys";
+    case craq_sys: return "craq_sys";
     default: assert(false);
   }
 }

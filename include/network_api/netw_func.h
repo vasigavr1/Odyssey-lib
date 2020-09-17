@@ -68,7 +68,7 @@ void ctx_increase_credits_on_polling_ack(context_t *ctx,
 // the old ack needs to be sent, before we try again to insert
 bool ctx_ack_insert(context_t *ctx,
                     uint16_t qp_id,
-                    uint8_t mes_num,
+                    uint32_t mes_num,
                     uint64_t l_id,
                     const uint8_t m_id);
 

@@ -44,6 +44,15 @@
   #define main_loop cht_main_loop
 #endif
 
+#ifdef CRAQ
+  #include "cr_inline_util.h"
+  #include "cr_util.h"
+  #define appl_init_qp_meta cr_init_qp_meta
+  #define set_up_appl_ctx set_up_cr_ctx
+  #define main_loop cr_main_loop
+#endif
+
+
 
 
 #ifndef ODYSSEY_WRKR_PROT_SEL_H

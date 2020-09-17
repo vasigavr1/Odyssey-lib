@@ -13,7 +13,8 @@ typedef enum {
   zookeeper_sys = 142,
   derecho_sys,
   hermes_sys,
-  cht_sys
+  cht_sys,
+  craq_sys
 } system_t;
 
 //#define COMPILED_SYSTEM zookeeper_sys
@@ -40,14 +41,20 @@ typedef enum {
   #define COMPILED_SYSTEM cht_sys
 #endif
 
+#ifdef CRAQ
+  #define COMPILED_SYSTEM craq_sys
+#endif
+
 ///Default for the IDE
 #ifndef KITE
   #ifndef ZOOKEEPER
     #ifndef DERECHO
       #ifndef HERMES
         #ifndef CHT
-          #define ZOOKEPER
-          #define COMPILED_SYSTEM zookeeper_sys
+          #ifndef CRAQ
+            #define ZOOKEPER
+            #define COMPILED_SYSTEM zookeeper_sys
+          #endif
         #endif
       #endif
     #endif

@@ -25,12 +25,18 @@
   #include "cht_config.h"
 #endif
 
+#ifdef CRAQ
+  #include "cr_config.h"
+#endif
+
 #ifndef KITE
   #ifndef ZOOKEEPER
     #ifndef DERECHO
       #ifndef HERMES
         #ifndef CHT
-          #include "zk_config.h"
+          #ifndef CRAQ
+            #include "zk_config.h"
+          #endif
         #endif
       #endif
     #endif

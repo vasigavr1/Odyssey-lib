@@ -32,4 +32,9 @@
   #define appl_init_func cht_init_functionality
 #endif
 
+#ifdef CRAQ
+  #include "cr_util.h"
+  #define appl_init_func cr_init_functionality
+#endif
+
 #endif //ODYSSEY_MAIN_PROT_SEL_H

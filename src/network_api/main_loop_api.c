@@ -262,10 +262,10 @@ inline void ctx_poll_incoming_messages(context_t *ctx, uint16_t qp_id)
 //------------------------------ ACKS --------------------------------
 //---------------------------------------------------------------------------*/
 
-inline uint32_t ctx_find_when_the_ack_points_acked(ctx_ack_mes_t *ack,
-                                                          fifo_t *rob,
-                                                          uint64_t pull_lid,
-                                                          uint32_t *ack_num)
+forceinline uint32_t ctx_find_when_the_ack_points_acked(ctx_ack_mes_t *ack,
+                                                        fifo_t *rob,
+                                                        uint64_t pull_lid,
+                                                        uint32_t *ack_num)
 {
   if (pull_lid >= ack->l_id) {
     (*ack_num) -= (pull_lid - ack->l_id);
@@ -278,9 +278,9 @@ inline uint32_t ctx_find_when_the_ack_points_acked(ctx_ack_mes_t *ack,
 }
 
 ///
-inline void ctx_increase_credits_on_polling_ack(context_t *ctx,
-                                                       uint16_t qp_id,
-                                                       ctx_ack_mes_t *ack)
+forceinline void ctx_increase_credits_on_polling_ack(context_t *ctx,
+                                                     uint16_t qp_id,
+                                                     ctx_ack_mes_t *ack)
 {
   per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_id];
   ctx->qp_meta[qp_meta->recv_qp_id].credits[ack->m_id] += ack->credits;
@@ -295,7 +295,7 @@ inline void ctx_increase_credits_on_polling_ack(context_t *ctx,
 // the old ack needs to be sent, before we try again to insert
 forceinline bool ctx_ack_insert(context_t *ctx,
                                 uint16_t qp_id,
-                                uint8_t mes_num,
+                                uint32_t mes_num,
                                 uint64_t l_id,
                                 const uint8_t m_id)
 {

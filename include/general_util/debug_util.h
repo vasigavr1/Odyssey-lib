@@ -7,7 +7,9 @@
 
 #include "top.h"
 
-static inline bool is_client_req_active(uint32_t sess_id, uint32_t req_array_i, uint16_t t_id);
+bool is_client_req_active(uint32_t sess_id,
+                          uint32_t req_array_i,
+                          uint16_t t_id);
 
 // called when failing see an even version -- I.E. called by reads
 static inline void debug_stalling_on_lock(uint32_t *debug_cntr, const char *message, uint16_t t_id)
