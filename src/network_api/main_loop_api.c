@@ -124,7 +124,7 @@ static forceinline void ctx_forge_unicast_wr(context_t *ctx,
   send_sgl[mes_i].addr = (uintptr_t) get_fifo_pull_slot(send_fifo);
   send_sgl[mes_i].lkey = qp_meta->send_mr[fifo_i]->lkey;
 
-  printf("%u/%p \n", send_sgl[mes_i].length, (void*)send_sgl[mes_i].addr );
+  //printf("%u/%p \n", send_sgl[mes_i].length, (void*)send_sgl[mes_i].addr );
 
   //if (qp_meta->receipient_num > 1) {
   uint8_t rm_id = get_fifo_slot_meta_pull(send_fifo)->rm_id;

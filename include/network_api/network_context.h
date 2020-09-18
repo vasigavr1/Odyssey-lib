@@ -205,11 +205,11 @@ void create_per_qp_meta(per_qp_meta_t *qp_meta,
                         const char *recv_string);
 
 
-void crate_ack_qp_meta(per_qp_meta_t* qp_meta,
-                       uint16_t recv_qp_id,
-                       uint32_t receipient_num,
-                       uint32_t remote_senders_num,
-                       uint16_t max_remote_credits);
+void create_ack_qp_meta(per_qp_meta_t *qp_meta,
+                        uint16_t recv_qp_id,
+                        uint32_t receipient_num,
+                        uint32_t remote_senders_num,
+                        uint16_t max_remote_credits);
 
 
 
