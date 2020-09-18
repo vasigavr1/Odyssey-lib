@@ -336,8 +336,10 @@ void ctx_prepost_recvs(context_t *ctx)
   for (int qp_i = 0; qp_i < ctx->qp_num; ++qp_i) {
     per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_i];
     if (ENABLE_ASSERTIONS && ctx->t_id == 0)
-      my_printf(yellow, "Wrkr %u QP %u: %s preposts %u recvs\n",
-                ctx->t_id, qp_i, qp_meta->recv_string, qp_meta->recv_wr_num);
+      my_printf(yellow, "Wrkr %u QP %u: %s preposts %u recvs, addr %p size %u\n",
+                ctx->t_id, qp_i, qp_meta->recv_string, qp_meta->recv_wr_num,
+                qp_meta->recv_info->buf,
+                qp_meta->recv_info->slot_size);
     post_recvs_with_recv_info(qp_meta->recv_info,
                               qp_meta->recv_wr_num);
   }

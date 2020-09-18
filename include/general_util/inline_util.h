@@ -24,7 +24,7 @@ static inline bool all_sessions_are_stalled(context_t *ctx,
   // if there are clients the "all_sessions_stalled" flag is not used,
   // so we need not bother checking it
   if (!ENABLE_CLIENTS && all_sessions_stalled) {
-    stalled_sessions_dbg_counter++;
+    (*stalled_sessions_dbg_counter)++;
     if (ENABLE_ASSERTIONS) {
       if (*stalled_sessions_dbg_counter == MILLION) {
         //my_printf(red, "Wrkr %u, all sessions are stalled \n", ctx->t_id);
