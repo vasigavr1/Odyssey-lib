@@ -8,9 +8,11 @@ inline void ctx_refill_recvs(context_t *ctx,
                              uint16_t qp_id)
 {
   per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_id];
-  if (qp_meta->recv_wr_num > qp_meta->recv_info->posted_recvs)
+  if (qp_meta->recv_wr_num > qp_meta->recv_info->posted_recvs) {
+    //printf("Posting %u \n", qp_meta->recv_wr_num - qp_meta->recv_info->posted_recvs);
     post_recvs_with_recv_info(qp_meta->recv_info,
                               qp_meta->recv_wr_num - qp_meta->recv_info->posted_recvs);
+  }
 }
 
 /* ---------------------------------------------------------------------------
@@ -341,7 +343,6 @@ forceinline void ctx_send_acks(context_t *ctx, uint16_t qp_id)
 {
   per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_id];
   per_qp_meta_t *recv_qp_meta = &ctx->qp_meta[qp_meta->recv_qp_id];
-  //p_ops_t *p_ops = (p_ops_t *) ctx->appl_ctx;
   ctx_ack_mes_t *acks = (ctx_ack_mes_t *) qp_meta->send_fifo->fifo;
   uint8_t ack_i = 0, prev_ack_i = 0, first_wr = 0;
   struct ibv_send_wr *bad_send_wr;
@@ -370,8 +371,12 @@ forceinline void ctx_send_acks(context_t *ctx, uint16_t qp_id)
     qp_meta->mfs->send_helper(ctx);
 
   //Post receives
-  if (recvs_to_post_num > 0) {
-    post_recvs_with_recv_info(recv_qp_meta->recv_info, recvs_to_post_num);
+  if (ack_i > 0) {
+    //if (recvs_to_post_num > 0) {
+    //printf("Should post %u \n", recvs_to_post_num);
+    ctx_refill_recvs(ctx, qp_meta->recv_qp_id);
+    //post_recvs_with_recv_info(recv_qp_meta->recv_info, recvs_to_post_num);
+
     //checks_when_posting_write_receives(qp_meta->recv_info, recvs_to_post_num, ack_i);
   }
   // SEND the acks
