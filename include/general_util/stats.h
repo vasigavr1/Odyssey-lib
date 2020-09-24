@@ -12,8 +12,8 @@
 #include "generic_opcodes.h"
 
 
-#define MAX_LATENCY 600 //in us
-#define LATENCY_BUCKETS 300 //latency accuracy
+#define MAX_LATENCY 400 //in us
+#define LATENCY_BUCKETS 200 //latency accuracy
 
 // Store statistics from the workers, for the stats thread to use
 typedef struct thread_stats t_stats_t;

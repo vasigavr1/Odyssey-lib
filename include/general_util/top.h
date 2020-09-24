@@ -74,8 +74,8 @@ typedef struct key mica_key_t;
 #define MACHINE_NUM 5
 
 
-#define WORKERS_PER_MACHINE 35
-#define SESSIONS_PER_THREAD 2
+#define WORKERS_PER_MACHINE 10
+#define SESSIONS_PER_THREAD 32
 #define WRITE_RATIO 1000 //Warning write ratio is given out of a 1000, e.g 10 means 10/1000 i.e. 1%
 #define RMW_RATIO 0000// this is out of 1000, e.g. 10 means 1%
 #define ENABLE_MULTICAST_ 0
@@ -83,9 +83,9 @@ typedef struct key mica_key_t;
 #define ENABLE_ASSERTIONS 0
 #define DISABLE_LOCKING 0
 
-#define ENABLE_CLIENTS 1
-#define CLIENTS_PER_MACHINE_ 5
-#define PER_SESSION_REQ_NUM 20
+#define ENABLE_CLIENTS 0
+#define CLIENTS_PER_MACHINE_ 2
+#define PER_SESSION_REQ_NUM 1
 #define CLIENTS_PER_MACHINE (ENABLE_CLIENTS ? CLIENTS_PER_MACHINE_ : 0)
 #define ENABLE_LOCK_FREE_READING 1
 
@@ -94,7 +94,7 @@ typedef struct key mica_key_t;
 #define PUT_A_MACHINE_TO_SLEEP 0
 #define MACHINE_THAT_SLEEPS 1
 
-#define MEASURE_LATENCY 1
+#define MEASURE_LATENCY 0
 #define LATENCY_MACHINE 0
 #define LATENCY_THREAD 0
 #define MEASURE_READ_LATENCY 2 // 2 means mixed
@@ -104,7 +104,7 @@ typedef struct key mica_key_t;
 
 // PRINTS -- STATS
 #define EXIT_ON_PRINT 1
-#define PRINT_NUM 3
+#define PRINT_NUM 2
 #define ENABLE_MS_MEASUREMENTS 0 // finer granularity measurements
 #define SHOW_STATS_LATENCY_STYLE 1
 

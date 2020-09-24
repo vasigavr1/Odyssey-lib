@@ -158,7 +158,8 @@ static inline void KVS_local_read(mica_op_t *kv_ptr,
     debug_stalling_on_lock(&debug_cntr, "local read", t_id);
     memcpy(value_to_read, kv_ptr->value, (size_t) VALUE_SIZE);
   } while (!(check_seqlock_lock_free(&kv_ptr->seqlock, &tmp_lock)));
-  *resp_type = KVS_LOCAL_GET_SUCCESS;
+	if (resp_type != NULL)
+  	*resp_type = KVS_LOCAL_GET_SUCCESS;
 }
 
 static inline void KVS_write(mica_op_t *kv_ptr, uint8_t *value_to_write)
