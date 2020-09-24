@@ -74,16 +74,18 @@ typedef struct key mica_key_t;
 #define MACHINE_NUM 5
 
 
-#define WORKERS_PER_MACHINE 25
-#define SESSIONS_PER_THREAD 64
-#define WRITE_RATIO 500 //Warning write ratio is given out of a 1000, e.g 10 means 10/1000 i.e. 1%
+#define WORKERS_PER_MACHINE 35
+#define SESSIONS_PER_THREAD 2
+#define WRITE_RATIO 1000 //Warning write ratio is given out of a 1000, e.g 10 means 10/1000 i.e. 1%
 #define RMW_RATIO 0000// this is out of 1000, e.g. 10 means 1%
 #define ENABLE_MULTICAST_ 0
 
-#define ENABLE_ASSERTIONS 1
+#define ENABLE_ASSERTIONS 0
+#define DISABLE_LOCKING 0
 
-#define ENABLE_CLIENTS 0
+#define ENABLE_CLIENTS 1
 #define CLIENTS_PER_MACHINE_ 5
+#define PER_SESSION_REQ_NUM 20
 #define CLIENTS_PER_MACHINE (ENABLE_CLIENTS ? CLIENTS_PER_MACHINE_ : 0)
 #define ENABLE_LOCK_FREE_READING 1
 
@@ -92,7 +94,7 @@ typedef struct key mica_key_t;
 #define PUT_A_MACHINE_TO_SLEEP 0
 #define MACHINE_THAT_SLEEPS 1
 
-#define MEASURE_LATENCY 0
+#define MEASURE_LATENCY 1
 #define LATENCY_MACHINE 0
 #define LATENCY_THREAD 0
 #define MEASURE_READ_LATENCY 2 // 2 means mixed
@@ -101,8 +103,8 @@ typedef struct key mica_key_t;
 #define CREDIT_TIMEOUT  M_16 // B_4_EXACT //
 
 // PRINTS -- STATS
-#define EXIT_ON_PRINT 0
-#define PRINT_NUM 1
+#define EXIT_ON_PRINT 1
+#define PRINT_NUM 3
 #define ENABLE_MS_MEASUREMENTS 0 // finer granularity measurements
 #define SHOW_STATS_LATENCY_STYLE 1
 
@@ -227,7 +229,7 @@ enum {
 #define PC_WRITES_NUM 5
 #define PC_IDEAL 0
 
-#define PER_SESSION_REQ_NUM 15 //(MS_WRITES_NUM + 4) //(HM_WRITES_NUM + 15) //(TREIBER_WRITES_NUM + 3) //   (HM_WRITES_NUM + 15) //   ((2 * PC_WRITES_NUM) + 5)
+ //(MS_WRITES_NUM + 4) //(HM_WRITES_NUM + 15) //(TREIBER_WRITES_NUM + 3) //   (HM_WRITES_NUM + 15) //   ((2 * PC_WRITES_NUM) + 5)
 #define CLIENT_DEBUG 0
 
 

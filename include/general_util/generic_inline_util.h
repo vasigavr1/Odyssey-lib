@@ -24,6 +24,7 @@ static inline bool is_even(uint64_t var) {
 static inline void lock_seqlock(seqlock_t *seqlock)
 {
   if (WORKERS_PER_MACHINE == 1) return;
+  if (DISABLE_LOCKING) return;
   uint64_t tmp_lock, new_lock;
   tmp_lock = (uint64_t) atomic_load_explicit(seqlock, memory_order_acquire);
   do {
@@ -46,6 +47,7 @@ static inline void lock_seqlock(seqlock_t *seqlock)
 static inline void unlock_seqlock(seqlock_t *seqlock)
 {
   if (WORKERS_PER_MACHINE == 1) return;
+  if (DISABLE_LOCKING) return;
   uint64_t tmp = *seqlock;
   if (DEBUG_SEQLOCKS) {
     assert(is_odd(tmp));
@@ -56,6 +58,7 @@ static inline void unlock_seqlock(seqlock_t *seqlock)
 // LOCK-free read
 static inline uint64_t read_seqlock_lock_free(seqlock_t *seqlock)
 {
+  if (DISABLE_LOCKING) return 0;
   if (!ENABLE_LOCK_FREE_READING) {
     lock_seqlock(seqlock);
     return 0;
@@ -72,6 +75,7 @@ static inline uint64_t read_seqlock_lock_free(seqlock_t *seqlock)
 static inline bool check_seqlock_lock_free(seqlock_t *seqlock,
                                            uint64_t *read_lock)
 {
+  if (DISABLE_LOCKING) return true;
   if (!ENABLE_LOCK_FREE_READING) {
     unlock_seqlock(seqlock);
     return true;

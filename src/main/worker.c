@@ -38,7 +38,8 @@ void *worker(void *arg)
   ctx->appl_ctx = (void*) set_up_appl_ctx(ctx);
 
   if (t_id == 0)
-    my_printf(green, "Worker %d  reached the loop \n", t_id);
+    my_printf(green, "Worker %d  reached the loop "
+      "%d sessions \n", t_id, SESSIONS_PER_THREAD);
 
   ///
   main_loop(ctx);

@@ -85,7 +85,8 @@ static inline void clt_start_latency_mes(trace_info_t* tr_info,
 {
   if ((!MEASURE_LATENCY) ||
       (!tr_info->measuring_latency) ||
-      (tr_info->lat_info->measured_req_flag != NO_REQ)) return;
+      (tr_info->lat_info->measured_req_flag != NO_REQ) ||
+      (sess_id != tr_info->lat_info->measured_sess_id)) return;
 
   start_measurement(tr_info->lat_info, sess_id, opcode, tr_info->t_id);
 
@@ -98,8 +99,13 @@ static inline void clt_stop_latency_mes(trace_info_t* tr_info,
       (!tr_info->measuring_latency) ||
       (tr_info->lat_info->measured_req_flag == NO_REQ)) return;
 
-  if (tr_info->lat_info->measured_sess_id == sess_id)
+  if (tr_info->lat_info->measured_sess_id == sess_id) {
     report_latency(tr_info->lat_info);
+
+    tr_info->lat_info->measured_sess_id++;
+    if (tr_info->lat_info->measured_sess_id > tr_info->max_sess)
+      tr_info->lat_info->measured_sess_id = tr_info->min_sess;
+  }
 }
 
 // Use a trace - can be either manufactured or from text
