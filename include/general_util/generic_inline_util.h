@@ -53,6 +53,7 @@ static inline void unlock_seqlock(seqlock_t *seqlock)
     assert(is_odd(tmp));
   }
   atomic_store_explicit(seqlock, tmp + 1, memory_order_release);
+  //asm volatile ("clflush (%0)" :: "r"(seqlock));
 }
 
 // LOCK-free read
