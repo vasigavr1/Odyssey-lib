@@ -156,9 +156,6 @@ typedef struct context {
   char* local_ip;
   void* appl_ctx;
   ctx_tmp_t* ctx_tmp;
-
-
-
 } context_t;
 
 static void check_ctx(context_t *ctx)
