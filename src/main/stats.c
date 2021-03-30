@@ -58,7 +58,7 @@ void print_latency_stats(void)
   };
   sprintf(filename, "%s/latency_%s_w_%d%s_%s.csv", path,
           system_name(),
-          WRITE_RATIO / 10, "%",
+          write_ratio / 10, "%",
           workload[MEASURE_READ_LATENCY]);
 
   latency_stats_fd = fopen(filename, "w");

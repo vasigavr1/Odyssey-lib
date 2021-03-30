@@ -476,7 +476,7 @@ forceinline void  ctx_fill_trace_op(context_t *ctx,
 
   if (ENABLE_ASSERTIONS) assert(op->opcode != NOP);
   bool is_update = op->opcode == KVS_OP_PUT;
-  if (WRITE_RATIO >= 1000) assert(is_update);
+  if (write_ratio >= 1000) assert(is_update);
   op->val_len = is_update ? (uint8_t) (VALUE_SIZE >> SHIFT_BITS) : (uint8_t) 0;
 
   op->session_id = (uint16_t) working_session;
@@ -488,7 +488,7 @@ forceinline void  ctx_fill_trace_op(context_t *ctx,
   }
 
   if (ENABLE_ASSERTIONS == 1) {
-    assert(WRITE_RATIO > 0 || is_update == 0);
+    assert(write_ratio > 0 || is_update == 0);
     if (is_update) assert(op->val_len > 0);
   }
 }
