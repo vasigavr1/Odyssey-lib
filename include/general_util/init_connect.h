@@ -19,12 +19,12 @@ static int spawn_stats_thread() {
   CPU_ZERO(&cpus_stats);
   if(num_threads > 17) {
     core = 39;
-    CPU_SET(core, &cpus_stats);
-  }
-  else {
+  } else if(2 * (num_threads) + 2 < TOTAL_CORES){
     core = 2 * (num_threads) + 2;
-    CPU_SET(core, &cpus_stats);
+  } else{
+    core = num_threads + 1;
   }
+  CPU_SET(core, &cpus_stats);
   my_printf(yellow, "Creating stats thread at core %d\n", core);
   pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpus_stats);
   return pthread_create(&thread_arr[0], &attr, print_stats, NULL);
