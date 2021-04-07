@@ -12,6 +12,7 @@
 
 
 //Global Vars
+int bqr_read_buffer_size, bqr_is_remote;
 int is_roce, machine_id, num_threads;
 int write_ratio = WRITE_RATIO;
 struct latency_counters latency_count;

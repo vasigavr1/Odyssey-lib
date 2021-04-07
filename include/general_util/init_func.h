@@ -44,9 +44,14 @@ static void handle_program_inputs(int argc, char *argv[])
   num_threads = -1;
   is_roce = -1; machine_id = -1;
   write_ratio = -1;
+  bqr_is_remote = 1;
+  bqr_read_buffer_size = 0;
+
   int c;
   char *tmp_ip;
   static struct option opts[] = {
+    { .name = "bqr-buffer-size",	.has_arg = 1, .val = 'B' },
+    { .name = "bqr-is-remote",	    .has_arg = 1, .val = 'R' },
     { .name = "write-ratio",		.has_arg = 1, .val = 'w' },
     { .name = "machine-id",			.has_arg = 1, .val = 'm' },
     { .name = "is-roce",			.has_arg = 1, .val = 'r' },
@@ -57,11 +62,17 @@ static void handle_program_inputs(int argc, char *argv[])
 
   /* Parse and check arguments */
   while(true) {
-    c = getopt_long(argc, argv, "M:w:t:b:N:n:c:u:m:p:r:i:l:x", opts, NULL);
+    c = getopt_long(argc, argv, "R:B:M:w:t:b:N:n:c:u:m:p:r:i:l:x", opts, NULL);
     if(c == -1) {
       break;
     }
     switch (c) {
+      case 'B':
+        bqr_read_buffer_size = atoi(optarg);
+        break;
+      case 'R':
+        bqr_is_remote = atoi(optarg);
+        break;
       case 'w':
         write_ratio = atoi(optarg);
         break;
@@ -86,6 +97,7 @@ static void handle_program_inputs(int argc, char *argv[])
   if (machine_id == -1) assert(false);
   assert(machine_id < MACHINE_NUM);
   assert(!(is_roce == 1 && ENABLE_MULTICAST));
+  assert(bqr_is_remote == 0 || bqr_is_remote == 1);
 
   char* chars_array = strtok(tmp_ip, ",");
   remote_ips = (char **) (malloc(REM_MACH_NUM * sizeof(char *)));

@@ -300,6 +300,7 @@ typedef struct remote_qp {
   // no padding needed- false sharing is not an issue, only fragmentation
 } remote_qp_t;
 
+extern int bqr_read_buffer_size, bqr_is_remote;
 extern int write_ratio;
 extern remote_qp_t ***rem_qp; //[MACHINE_NUM][WORKERS_PER_MACHINE][QP_NUM];
 extern int is_roce, machine_id, num_threads;
