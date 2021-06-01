@@ -58,20 +58,32 @@ typedef struct key mica_key_t;
 
 //-------------------------------------------
 /* ----------SYSTEM------------------------ */
-//-------------------------------------------
-#define TOTAL_CORES 40
+// Cloudlab
+#define TOTAL_CORES 16
 #define TOTAL_CORES_ (TOTAL_CORES - 1)
 #define SOCKET_NUM 2
-#define PHYSICAL_CORES_PER_SOCKET 10
-#define LOGICAL_CORES_PER_SOCKET 20
-#define PHYSICAL_CORE_DISTANCE 2 // distance between two physical cores of the same socket
-#define WORKER_HYPERTHREADING 0 // schedule two threads on the same core
+#define PHYSICAL_CORES_PER_SOCKET 8
+#define LOGICAL_CORES_PER_SOCKET 8
+#define PHYSICAL_CORE_DISTANCE 1 // distance between two physical cores of the same socket
+#define WORKER_HYPERTHREADING 1 // schedule two threads on the same core/-------------------------------------------
 #define MAX_SERVER_PORTS 1 //
+
+// Informatics
+//#define TOTAL_CORES 40
+//#define TOTAL_CORES_ (TOTAL_CORES - 1)
+//#define SOCKET_NUM 2
+//#define PHYSICAL_CORES_PER_SOCKET 10
+//#define LOGICAL_CORES_PER_SOCKET 20
+//#define PHYSICAL_CORE_DISTANCE 2 // distance between two physical cores of the same socket
+//#define WORKER_HYPERTHREADING 0 // schedule two threads on the same core
+//#define MAX_SERVER_PORTS 1 //
+
 // Where to BIND the KVS
 #define KVS_SOCKET 0// (WORKERS_PER_MACHINE < 30 ? 0 : 1 )// socket where the cache is bind
 
 // CORE CONFIGURATION
 #define MACHINE_NUM 2
+
 
 
 #define WORKERS_PER_MACHINE 1
@@ -103,8 +115,8 @@ typedef struct key mica_key_t;
 #define CREDIT_TIMEOUT  M_16 // B_4_EXACT //
 
 // PRINTS -- STATS
-#define EXIT_ON_PRINT 0
-#define PRINT_NUM 2
+#define EXIT_ON_PRINT 1
+#define PRINT_NUM 3
 #define ENABLE_MS_MEASUREMENTS 0 // finer granularity measurements
 #define SHOW_STATS_LATENCY_STYLE 1
 
@@ -289,6 +301,8 @@ typedef struct remote_qp {
   // no padding needed- false sharing is not an issue, only fragmentation
 } remote_qp_t;
 
+extern int bqr_read_buffer_size, bqr_is_remote;
+extern int write_ratio;
 extern remote_qp_t ***rem_qp; //[MACHINE_NUM][WORKERS_PER_MACHINE][QP_NUM];
 extern int is_roce, machine_id, num_threads;
 extern char **remote_ips, *local_ip, *dev_name;

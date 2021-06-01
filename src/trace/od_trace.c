@@ -31,7 +31,7 @@ static uint8_t compute_opcode(struct opcode_info *opc_info, uint *seed)
       is_rmw = rand() % 1000 < RMW_RATIO;
   }
   if (!is_rmw) {
-    is_update = rand() % 1000 < WRITE_RATIO; //rand_r(seed) % 1000 < WRITE_RATIO;
+    is_update = rand() % 1000 < write_ratio; //rand_r(seed) % 1000 < WRITE_RATIO;
     is_sc = rand() % 1000 < SC_RATIO; //rand_r(seed) % 1000 < SC_RATIO;
   }
 
@@ -218,7 +218,7 @@ static trace_t* manufacture_trace(int t_id)
            (double) (opc_info->rmw_acquires * 100) / TRACE_SIZE,
            opc_info->writes + opc_info->sc_writes + opc_info->reads + opc_info->sc_reads + opc_info->rmws +
            opc_info->rmw_acquires,
-           TRACE_SIZE, WRITE_RATIO);
+           TRACE_SIZE, write_ratio);
   }
   trace[TRACE_SIZE].opcode = NOP;
   return trace;
