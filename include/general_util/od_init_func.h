@@ -10,7 +10,7 @@
 #include <getopt.h>
 #include "od_kvs.h"
 
-static void generic_static_assert_compile_parameters()
+static void od_generic_static_assert_compile_parameters()
 {
   assert(MICA_OP_SIZE == sizeof(mica_op_t));
   static_assert(IS_ALIGNED(MICA_VALUE_SIZE, 32), "VALUE_SIZE must be aligned with 32 bytes ");
@@ -39,7 +39,7 @@ static void generic_static_assert_compile_parameters()
   static_assert((MEASURE_LATENCY && PRINT_NUM) || (!MEASURE_LATENCY), "");
 }
 
-static void handle_program_inputs(int argc, char *argv[])
+static void od_handle_program_inputs(int argc, char **argv)
 {
   num_threads = -1;
   is_roce = -1; machine_id = -1;
@@ -122,7 +122,7 @@ static void handle_program_inputs(int argc, char *argv[])
   }
 }
 
-static void generic_init_globals(int qp_num)
+static void od_generic_init_globals(int qp_num)
 {
   time_approx = 0;
   workers_with_filled_qp_attr = 0;
@@ -228,9 +228,9 @@ static int pin_threads_avoiding_collisions(int c_id) {
   return c_core;
 }
 
-static void spawn_threads(struct thread_params *param_arr, uint16_t t_id, char* node_purpose,
-                   cpu_set_t *pinned_hw_threads, pthread_attr_t *attr, pthread_t *thread_arr,
-                   void *(*__start_routine) (void *), bool *occupied_cores)
+static void od_spawn_threads(struct thread_params *param_arr, uint16_t t_id, char* node_purpose,
+                             cpu_set_t *pinned_hw_threads, pthread_attr_t *attr, pthread_t *thread_arr,
+                             void *(*__start_routine) (void *), bool *occupied_cores)
 {
   param_arr[t_id].id = t_id < WORKERS_PER_MACHINE ? t_id : t_id - WORKERS_PER_MACHINE;
   int core = pin_thread(t_id); // + 8 + t_id * 20;
@@ -242,7 +242,7 @@ static void spawn_threads(struct thread_params *param_arr, uint16_t t_id, char* 
   occupied_cores[core] = 1;
 }
 
-static void fopen_client_logs(uint16_t i)
+static void od_fopen_client_logs(uint16_t i)
 {
   if (CLIENT_LOGS) {
     uint16_t cl_id = (uint16_t) (machine_id * CLIENTS_PER_MACHINE +

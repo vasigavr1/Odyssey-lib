@@ -58,8 +58,8 @@ int main(int argc, char *argv[])
         }
       #endif
 
-      spawn_threads(param_arr, i, node_purpose, &pinned_hw_threads,
-                    &attr, thread_arr, worker, occupied_cores);
+      od_spawn_threads(param_arr, i, node_purpose, &pinned_hw_threads,
+                       &attr, thread_arr, worker, occupied_cores);
     }
     else  {
       #ifdef ZOOKEEPER
@@ -67,9 +67,9 @@ int main(int argc, char *argv[])
           continue;
       #endif
       assert(ENABLE_CLIENTS);
-      fopen_client_logs(i);
-      spawn_threads(param_arr, i, "Client", &pinned_hw_threads,
-                    &attr, thread_arr, client, occupied_cores);
+      od_fopen_client_logs(i);
+      od_spawn_threads(param_arr, i, "Client", &pinned_hw_threads,
+                       &attr, thread_arr, client, occupied_cores);
     }
   }
 

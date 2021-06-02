@@ -37,9 +37,9 @@ void fill_req_array_on_rmw_early_fail(uint32_t sess_id, uint8_t* value_to_read,
 
 
 // Returns true if it's valid to pull a request for that session
-bool pull_request_from_this_session(bool stalled,
-                                    uint16_t sess_i,
-                                    uint16_t t_id);
+bool od_pull_request_from_this_session(bool stalled,
+                                       uint16_t sess_i,
+                                       uint16_t t_id);
 
 
 

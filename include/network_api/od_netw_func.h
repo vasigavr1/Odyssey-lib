@@ -109,8 +109,8 @@ static forceinline bool ctx_find_next_working_session(context_t *ctx,
                                                       uint16_t last_session,
                                                       bool *all_sessions_stalled)
 {
-  while (!pull_request_from_this_session(stalled[*working_session],
-                                         (uint16_t) *working_session, ctx->t_id)) {
+  while (!od_pull_request_from_this_session(stalled[*working_session],
+                                            (uint16_t) *working_session, ctx->t_id)) {
 
     MOD_INCR(*working_session, SESSIONS_PER_THREAD);
     if (*working_session == last_session) {

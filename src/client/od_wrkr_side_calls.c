@@ -133,9 +133,9 @@ forceinline void fill_req_array_on_rmw_early_fail(uint32_t sess_id, uint8_t* val
 
 
 // Returns true if it's valid to pull a request for that session
-forceinline bool pull_request_from_this_session(bool stalled,
-                                                uint16_t sess_i,
-                                                uint16_t t_id)
+forceinline bool od_pull_request_from_this_session(bool stalled,
+                                                   uint16_t sess_i,
+                                                   uint16_t t_id)
 {
   uint32_t pull_ptr = interface[t_id].wrkr_pull_ptr[sess_i];
   if (ENABLE_ASSERTIONS) {

@@ -37,14 +37,14 @@ static inline bool all_sessions_are_stalled(context_t *ctx,
 }
 
 
-static inline bool find_starting_session(context_t *ctx,
-                                         uint16_t last_session,
-                                         bool* stalled,
-                                         int* working_session)
+static inline bool od_find_starting_session(context_t *ctx,
+                                            uint16_t last_session,
+                                            bool* stalled,
+                                            int* working_session)
 {
   for (uint16_t i = 0; i < SESSIONS_PER_THREAD; i++) {
     uint16_t sess_i = (uint16_t)((last_session + i) % SESSIONS_PER_THREAD);
-    if (pull_request_from_this_session(stalled[sess_i], sess_i, ctx->t_id)) {
+    if (od_pull_request_from_this_session(stalled[sess_i], sess_i, ctx->t_id)) {
       *working_session = sess_i;
       break;
     }
