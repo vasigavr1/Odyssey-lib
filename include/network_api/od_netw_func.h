@@ -18,13 +18,13 @@ void ctx_refill_recvs(context_t *ctx,
 //------------------------------ INSERT --------------------------------
 //---------------------------------------------------------------------------*/
 
-void ctx_insert_mes(context_t *ctx, uint16_t qp_id,
-                    uint32_t send_size,
-                    uint32_t recv_size,
-                    bool break_message,
-                    void* source,
-                    uint32_t source_flag,
-                    uint16_t fifo_i);
+void od_insert_mes(context_t *ctx, uint16_t qp_id,
+                   uint32_t send_size,
+                   uint32_t recv_size,
+                   bool break_message,
+                   void* source,
+                   uint32_t source_flag,
+                   uint16_t fifo_i);
 
 /* ---------------------------------------------------------------------------
 //------------------------------ BROADCASTS --------------------------------
@@ -74,7 +74,7 @@ bool ctx_ack_insert(context_t *ctx,
 
 
 
-void ctx_send_acks(context_t *ctx, uint16_t qp_id);
+void od_send_acks(context_t *ctx, uint16_t qp_id);
 
 
 /* ---------------------------------------------------------------------------
@@ -98,24 +98,23 @@ void create_inputs_of_op(uint8_t **value_to_write, uint8_t **value_to_read,
 
 
 
-void ctx_fill_trace_op(context_t *ctx,
-                       trace_t *trace_op,
-                       ctx_trace_op_t *op,
-                       int working_session);
+void od_fill_trace_op(context_t *ctx,
+                      trace_t *trace_op,
+                      ctx_trace_op_t *op,
+                      int working_session);
 
-static forceinline bool ctx_find_next_working_session(context_t *ctx,
-                                                      int *working_session,
-                                                      bool *stalled,
-                                                      uint16_t last_session,
-                                                      bool *all_sessions_stalled)
+static forceinline bool od_find_next_working_session(context_t *ctx,
+                                                     int *working_session,
+                                                     bool *stalled,
+                                                     uint16_t last_session,
+                                                     bool *all_sessions_stalled)
 {
   while (!od_pull_request_from_this_session(stalled[*working_session],
                                             (uint16_t) *working_session, ctx->t_id)) {
 
     MOD_INCR(*working_session, SESSIONS_PER_THREAD);
     if (*working_session == last_session) {
-
-// If clients are used the condition does not guarantee that sessions are stalled
+      // If clients are used the condition does not guarantee that sessions are stalled
       if (!ENABLE_CLIENTS) *all_sessions_stalled = true;
       return true;
     }

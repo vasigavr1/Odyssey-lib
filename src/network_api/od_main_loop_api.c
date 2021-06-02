@@ -19,13 +19,13 @@ inline void ctx_refill_recvs(context_t *ctx,
 //------------------------------ INSERT --------------------------------
 //---------------------------------------------------------------------------*/
 
-forceinline void ctx_insert_mes(context_t *ctx, uint16_t qp_id,
-                                uint32_t send_size,
-                                uint32_t recv_size,
-                                bool break_message,
-                                void* source,
-                                uint32_t source_flag,
-                                uint16_t fifo_i)
+forceinline void od_insert_mes(context_t *ctx, uint16_t qp_id,
+                               uint32_t send_size,
+                               uint32_t recv_size,
+                               bool break_message,
+                               void* source,
+                               uint32_t source_flag,
+                               uint16_t fifo_i)
 {
   per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_id];
   fifo_t* send_fifo = &qp_meta->send_fifo[fifo_i];
@@ -339,7 +339,7 @@ forceinline bool ctx_ack_insert(context_t *ctx,
 
 
 
-forceinline void ctx_send_acks(context_t *ctx, uint16_t qp_id)
+forceinline void od_send_acks(context_t *ctx, uint16_t qp_id)
 {
   per_qp_meta_t *qp_meta = &ctx->qp_meta[qp_id];
   per_qp_meta_t *recv_qp_meta = &ctx->qp_meta[qp_meta->recv_qp_id];
@@ -451,7 +451,7 @@ forceinline void create_inputs_of_op(uint8_t **value_to_write, uint8_t **value_t
 }
 
 
-static inline void ctx_check_op(ctx_trace_op_t *op)
+static inline void od_check_op(ctx_trace_op_t *op)
 {
   if (ENABLE_ASSERTIONS) {
     check_state_with_allowed_flags(3, op->opcode, KVS_OP_PUT, KVS_OP_GET);
@@ -463,22 +463,21 @@ static inline void ctx_check_op(ctx_trace_op_t *op)
 }
 
 
-forceinline void  ctx_fill_trace_op(context_t *ctx,
-                                    trace_t *trace_op,
-                                    ctx_trace_op_t *op,
-                                    int working_session)
+forceinline void  od_fill_trace_op(context_t *ctx,
+                                   trace_t *trace_op,
+                                   ctx_trace_op_t *op,
+                                   int working_session)
 {
   create_inputs_of_op(&op->value_to_write, &op->value_to_read, &op->real_val_len,
                       &op->opcode, &op->index_to_req_array,
                       &op->key, ctx->ctx_tmp->tmp_val, trace_op, working_session, ctx->t_id);
 
-  ctx_check_op(op);
+  od_check_op(op);
 
   if (ENABLE_ASSERTIONS) assert(op->opcode != NOP);
   bool is_update = op->opcode == KVS_OP_PUT;
   if (write_ratio >= 1000) assert(is_update);
   op->val_len = is_update ? (uint8_t) (VALUE_SIZE >> SHIFT_BITS) : (uint8_t) 0;
-
   op->session_id = (uint16_t) working_session;
 
   if (ENABLE_CLIENTS) {

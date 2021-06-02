@@ -120,7 +120,7 @@ static inline void KVS_locate_one_kv_pair(int op_i, uint *tag, struct mica_bkt *
 	}
 }
 
-static inline void KVS_check_key(mica_op_t *kv_ptr, mica_key_t opkey, uint32_t op_i)
+static inline void od_KVS_check_key(mica_op_t *kv_ptr, mica_key_t opkey, uint32_t op_i)
 {
 	if (ENABLE_ASSERTIONS && kv_ptr == NULL) assert(false);
 	bool key_found = memcmp(&kv_ptr->key, &opkey, KEY_SIZE) == 0;
