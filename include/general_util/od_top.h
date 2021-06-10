@@ -184,7 +184,7 @@ typedef struct key mica_key_t;
 #define R_TO_W_DEBUG 0
 #define DEBUG_QUORUM 0
 #define DEBUG_BIT_VECS 0
-#define DEBUG_RMW 0
+#define DEBUG_RMW 1
 #define DEBUG_RECEIVES 0
 #define DEBUG_SESSIONS 0
 #define DEBUG_SESS_COUNTER M_16
@@ -269,14 +269,14 @@ enum {
 --------------------------------------------------*/
 #define MAX_BCAST_BATCH (ENABLE_MULTICAST == 1 ? 4 : 4) //how many broadcasts can fit in a batch
 #define MESSAGES_IN_BCAST (ENABLE_MULTICAST == 1 ? 1 : (REM_MACH_NUM))
-#define MESSAGES_IN_BCAST_BATCH MAX_BCAST_BATCH * MESSAGES_IN_BCAST //must be smaller than the q_depth
+#define MESSAGES_IN_BCAST_BATCH (MAX_BCAST_BATCH * MESSAGES_IN_BCAST) //must be smaller than the q_depth
 
 #define MIN_SS_BATCH 127// The minimum SS batch
 //////////////////////////////////////////////////////
 /////////////~~~~GLOBALS~~~~~~/////////////////////////
 //////////////////////////////////////////////////////
 
-/* info about a QP that msut be shared in intit phase */
+/* info about a QP that must be shared in init phase */
 typedef struct qp_attr {
   // ROCE
   uint64_t gid_global_interface_id;	// Needed for RoCE only
@@ -321,6 +321,12 @@ typedef struct trace_command {
   uint32_t key_id;
 } trace_t;
 
+typedef struct trace_info {
+  trace_t *trace;
+  uint32_t trace_iter;
+  uint16_t last_session;
+} trace_info_t;
+
 typedef struct thread_params {
   int id;
 } thread_params_t;
@@ -334,19 +340,23 @@ typedef struct thread_params {
 struct network_ts_tuple {
   uint32_t version;
   uint8_t m_id;
-
 } __attribute__((__packed__));
 
-struct ts_tuple {
+typedef struct ts_tuple {
   uint8_t m_id;
   uint32_t version;
-};
+} ts_tuple_t;
 
 typedef struct key {
   unsigned int bkt			:32;
   unsigned int server			:16;
   unsigned int tag			:16;
 } mica_key_t;
+
+typedef struct sess_stall_info {
+  bool *stalled;
+  bool all_stalled;
+} sess_stall_t;
 
 typedef atomic_uint_fast64_t seqlock_t;
 typedef struct mica_op mica_op_t;

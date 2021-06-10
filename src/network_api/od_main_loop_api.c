@@ -264,6 +264,14 @@ inline void ctx_poll_incoming_messages(context_t *ctx, uint16_t qp_id)
 //------------------------------ ACKS --------------------------------
 //---------------------------------------------------------------------------*/
 
+forceinline bool od_is_ack_too_old(ctx_ack_mes_t *ack,
+                                   fifo_t *rob,
+                                   uint64_t pull_lid)
+{
+  return (rob->capacity == 0 ) ||
+         (pull_lid >= ack->l_id && (pull_lid - ack->l_id) >= ack->ack_num);
+}
+
 forceinline uint32_t ctx_find_when_the_ack_points_acked(ctx_ack_mes_t *ack,
                                                         fifo_t *rob,
                                                         uint64_t pull_lid,

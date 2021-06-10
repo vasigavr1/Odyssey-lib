@@ -52,6 +52,9 @@ void ctx_poll_incoming_messages(context_t *ctx, uint16_t qp_id);
 /* ---------------------------------------------------------------------------
 //------------------------------ ACKS --------------------------------
 //---------------------------------------------------------------------------*/
+bool od_is_ack_too_old(ctx_ack_mes_t *ack,
+                       fifo_t *rob,
+                       uint64_t pull_lid);
 
 uint32_t ctx_find_when_the_ack_points_acked(ctx_ack_mes_t *ack,
                                             fifo_t *rob,
