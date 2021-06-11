@@ -287,7 +287,6 @@ static inline void reset_fifo_slot(fifo_t *send_fifo)
   slot_meta->byte_size = (uint16_t) send_fifo->mes_header;
   slot_meta->resp_size = 0;
   slot_meta->coalesce_num = 0;
-
 }
 
 

@@ -193,11 +193,14 @@ inline void ctx_send_unicasts(context_t *ctx,
       }
       ctx_forge_unicast_wr(ctx, qp_id, fifo_i, mes_i);
 
+      slot_meta_t *slot_meta = get_fifo_slot_meta_pull(send_fifo);
       fifo_send_from_pull_slot(send_fifo);
 
       // Credit management
-      if (qp_meta->needs_credits)
-        (*qp_meta->credits)--; // TODO decrement the correct counter
+      if (qp_meta->needs_credits) {
+        /// This is not well-tested, it's only used in ZK
+        qp_meta->credits[slot_meta->rm_id]--;
+      }
       mes_i++;
     }
   }
@@ -254,8 +257,9 @@ inline void ctx_poll_incoming_messages(context_t *ctx, uint16_t qp_id)
   qp_meta->recv_info->posted_recvs -= qp_meta->polled_messages;
 
 
-  if (qp_meta->polled_messages > 0 && qp_meta->mfs->recv_kvs != NULL)
+  if (qp_meta->polled_messages > 0 && qp_meta->mfs->recv_kvs != NULL) {
     qp_meta->mfs->recv_kvs(ctx);
+  }
 
 }
 

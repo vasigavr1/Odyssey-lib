@@ -25,11 +25,11 @@ typedef struct clt_trace_t {
   uint16_t worker_num;
   latency_info_t *lat_info;
   bool measuring_latency;
-} trace_info_t;
+} clt_trace_t;
 
-static inline trace_info_t*  init_clt_trace(uint16_t t_id)
+static inline clt_trace_t*  init_clt_trace(uint16_t t_id)
 {
-  trace_info_t* tr_info = calloc(1, sizeof(trace_info_t));
+  clt_trace_t* tr_info = calloc(1, sizeof(clt_trace_t));
   tr_info->t_id = t_id;
   tr_info->m_id = (uint8_t) machine_id;
   tr_info->sess_offset = (uint16_t) (t_id * SESSIONS_PER_CLIENT);
@@ -80,7 +80,7 @@ static inline trace_info_t*  init_clt_trace(uint16_t t_id)
 }
 
 
-static inline void clt_start_latency_mes(trace_info_t* tr_info,
+static inline void clt_start_latency_mes(clt_trace_t* tr_info,
                                          uint32_t sess_id, uint8_t opcode)
 {
   if ((!MEASURE_LATENCY) ||
@@ -92,7 +92,7 @@ static inline void clt_start_latency_mes(trace_info_t* tr_info,
 
 }
 
-static inline void clt_stop_latency_mes(trace_info_t* tr_info,
+static inline void clt_stop_latency_mes(clt_trace_t* tr_info,
                                         uint32_t sess_id)
 {
   if ((!MEASURE_LATENCY) ||
@@ -111,7 +111,7 @@ static inline void clt_stop_latency_mes(trace_info_t* tr_info,
 // Use a trace - can be either manufactured or from text
 static inline uint32_t send_reqs_from_trace(trace_t *trace, uint16_t t_id)
 {
-  trace_info_t* tr_info = init_clt_trace(t_id);
+  clt_trace_t* tr_info = init_clt_trace(t_id);
   uint32_t dbg_cntr = 0;
   uint32_t trace_ptr = 0;
 

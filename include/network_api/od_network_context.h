@@ -87,7 +87,7 @@ typedef struct per_qp_meta {
   // flow control
   uint16_t max_credits;
   uint16_t *credits; //[MACHINE_NUM]
-  bool needs_credits;
+  bool  needs_credits;
   fifo_t *mirror_remote_recv_fifo;
 
   // send-recv fifos
