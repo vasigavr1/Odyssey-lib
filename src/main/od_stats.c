@@ -14,8 +14,13 @@ void *print_stats(void* no_arg)
   int sleep_time = 10;
   ctx->curr_w_stats = (t_stats_t *) malloc(num_threads * sizeof(t_stats_t));
   ctx->prev_w_stats = (t_stats_t *) malloc(num_threads * sizeof(t_stats_t));
+  ctx->all_per_t = (t_stats_t *) calloc(num_threads, sizeof(t_stats_t));
+  ctx->all_aggreg = (t_stats_t *) calloc(1, sizeof(t_stats_t));
+
+
   ctx->curr_c_stats = (c_stats_t *) malloc(num_threads * sizeof(c_stats_t));
   ctx->prev_c_stats = (c_stats_t *) malloc(num_threads * sizeof(c_stats_t));
+
 
   sleep(4);
   memcpy(ctx->prev_w_stats, (void *) t_stats, num_threads * (sizeof(struct thread_stats)));

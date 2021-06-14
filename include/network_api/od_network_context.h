@@ -17,6 +17,7 @@ typedef struct context context_t;
 typedef void (*insert_helper_t) (context_t *, void*, void *, uint32_t);
 typedef bool (*recv_handler_t)(context_t *);
 typedef void (*send_helper_t)(context_t *);
+typedef void (*send_debug_t)(context_t *, void*, uint32_t);
 typedef void (*recv_kvs_t)(context_t *);
 typedef void (*polling_debug_t)(context_t *, uint16_t, int);
 
@@ -56,6 +57,7 @@ typedef enum {
 typedef struct qp_meta_mfs {
   recv_handler_t recv_handler;
   send_helper_t send_helper;
+  send_debug_t send_debug;
   recv_kvs_t recv_kvs;
   insert_helper_t insert_helper;
   polling_debug_t polling_debug;

@@ -9,6 +9,7 @@
 //LATENCY Measurements
 #include <stdint.h>
 #include <time.h>
+#include <stdio.h>
 #include "od_generic_opcodes.h"
 
 
@@ -21,15 +22,23 @@ typedef struct stats all_stats_t;
 typedef struct client_stats c_stats_t;
 
 
-
 typedef struct stats_ctx {
   double seconds;
   uint16_t print_count;
   t_stats_t *curr_w_stats;
   t_stats_t *prev_w_stats;
+  t_stats_t *all_per_t;
+  t_stats_t *all_aggreg;
   c_stats_t *curr_c_stats;
   c_stats_t *prev_c_stats;
 } stats_ctx_t;
+
+typedef struct od_qp_stats{
+  uint64_t sent;
+  uint64_t mes_sent;
+  uint64_t received;
+  uint64_t mes_received;
+} od_qp_stats_t;
 
 
 typedef struct client_stats {
@@ -79,8 +88,35 @@ struct local_latency {
 
 
 
+static inline void stats_per_thread(const uint64_t *cur,
+                                    const uint64_t *prev,
+                                    uint64_t *all_aggreg,
+                                    uint64_t *new_stats,
+                                    uint16_t size)
+{
+  uint16_t number_of_stats = size / sizeof(uint64_t);
+  for (uint16_t i = 0; i < number_of_stats; i ++) {
+    new_stats[i] =  (cur[i] - prev[i]);
+    all_aggreg[i] += new_stats[i];
+  }
+}
 
+static inline double per_sec(stats_ctx_t *ctx,
+                             uint64_t stat)
+{
+  double seconds = ctx->seconds * MILLION;
+  return stat == 0 ? (double) 0 :
+                     (double) stat / seconds;
 
+}
+
+static inline double get_batch(stats_ctx_t *ctx,
+                               od_qp_stats_t *stats)
+{
+  double seconds = ctx->seconds * MILLION;
+  return (double) (stats->sent) /
+         (double) (stats->mes_sent);
+}
 
 #endif //OD_STATS_H
 

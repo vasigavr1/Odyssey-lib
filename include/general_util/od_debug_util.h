@@ -7,6 +7,24 @@
 
 #include "od_top.h"
 
+static inline void od_sending_stats(od_qp_stats_t *stats,
+                                    uint8_t coalesce_num)
+{
+  if (ENABLE_STAT_COUNTING) {
+    stats->mes_sent++;
+    stats->sent += coalesce_num;
+  }
+}
+
+static inline void od_receiving_stats(od_qp_stats_t *stats,
+                                      uint8_t coalesce_num)
+{
+  if (ENABLE_STAT_COUNTING) {
+    stats->mes_received++;
+    stats->received += coalesce_num;
+  }
+}
+
 bool is_client_req_active(uint32_t sess_id,
                           uint32_t req_array_i,
                           uint16_t t_id);

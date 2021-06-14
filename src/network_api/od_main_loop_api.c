@@ -362,7 +362,10 @@ forceinline void od_send_acks(context_t *ctx, uint16_t qp_id)
 
   for (uint8_t m_i = 0; m_i <= qp_meta->receipient_num; m_i++) {
     if (acks[m_i].opcode == OP_ACK) continue;
-    //checks_stats_prints_when_sending_acks(acks, m_i, ctx->t_id);
+    //checks_stats_prints_when_sending_acks(ctx, acks, m_i);
+    if (qp_meta->mfs->send_debug != NULL)
+      qp_meta->mfs->send_debug(ctx, (void *) acks, (uint32_t) m_i);
+
     acks[m_i].opcode = OP_ACK;
 
     selective_signaling_for_unicast(&qp_meta->sent_tx, qp_meta->ss_batch, qp_meta->send_wr,

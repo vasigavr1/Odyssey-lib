@@ -49,12 +49,14 @@ int main(int argc, char *argv[])
 
   for(uint16_t i = 0; i < TOTAL_THREADS; i++) {
     if (i < WORKERS_PER_MACHINE) {
-      #ifdef KITE
+      #if defined KITE || defined PAXOS
         // PAXOS VERIFIER
         if (VERIFY_PAXOS || PRINT_LOGS || COMMIT_LOGS) {
           char fp_name[40];
-          sprintf(fp_name, "../PaxosVerifier/thread%d.out", GET_GLOBAL_T_ID(machine_id, i));
+          my_printf(green, "WILL PRINT LOGS IN THIS RUN \n");
+          sprintf(fp_name, "../paxos/src/PaxosVerifier/thread%d.out", GET_GLOBAL_T_ID(machine_id, i));
           rmw_verify_fp[i] = fopen(fp_name, "w+");
+          assert(rmw_verify_fp[i] != NULL);
         }
       #endif
 

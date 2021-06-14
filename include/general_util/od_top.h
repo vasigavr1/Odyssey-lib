@@ -86,13 +86,13 @@ typedef struct key mica_key_t;
 
 
 
-#define WORKERS_PER_MACHINE 20
+#define WORKERS_PER_MACHINE 1
 #define SESSIONS_PER_THREAD 40
 #define WRITE_RATIO 500 //Warning write ratio is given out of a 1000, e.g 10 means 10/1000 i.e. 1%
 #define RMW_RATIO 1000// this is out of 1000, e.g. 10 means 1%
 #define ENABLE_MULTICAST_ 0
 
-#define ENABLE_ASSERTIONS 1
+#define ENABLE_ASSERTIONS 0
 #define DISABLE_LOCKING 0
 
 #define ENABLE_CLIENTS 0
@@ -118,7 +118,7 @@ typedef struct key mica_key_t;
 #define EXIT_ON_PRINT 0
 #define PRINT_NUM 3
 #define ENABLE_MS_MEASUREMENTS 0 // finer granularity measurements
-#define SHOW_STATS_LATENCY_STYLE 1
+#define SHOW_AGGREGATE_STATS 0
 
 
 // QUORUM
