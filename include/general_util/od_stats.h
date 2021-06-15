@@ -88,18 +88,27 @@ struct local_latency {
 
 
 
-static inline void stats_per_thread(const uint64_t *cur,
-                                    const uint64_t *prev,
-                                    uint64_t *all_aggreg,
-                                    uint64_t *new_stats,
-                                    uint16_t size)
+
+static inline void get_all_wrkr_stats(stats_ctx_t *ctx,
+                                      int wrkr_num,
+                                      uint32_t size)
 {
+  uint64_t *cur = (uint64_t *) ctx->curr_w_stats;
+  uint64_t *prev = (uint64_t *) ctx->prev_w_stats;
+  uint64_t *all_per_t = (uint64_t *) ctx->all_per_t;
+  uint64_t *all_aggreg = (uint64_t *) ctx->all_aggreg;
   uint16_t number_of_stats = size / sizeof(uint64_t);
-  for (uint16_t i = 0; i < number_of_stats; i ++) {
-    new_stats[i] =  (cur[i] - prev[i]);
-    all_aggreg[i] += new_stats[i];
+
+  for (int w_i = 0; w_i < wrkr_num; w_i++) {
+    for (uint16_t i = 0; i < number_of_stats; i ++) {
+      uint32_t stat_i = (w_i * number_of_stats) + i;
+      all_per_t[stat_i] =  (cur[stat_i] - prev[stat_i]);
+      all_aggreg[i] += all_per_t[stat_i];
+    }
   }
 }
+
+
 
 static inline double per_sec(stats_ctx_t *ctx,
                              uint64_t stat)
