@@ -118,7 +118,7 @@ typedef struct key mica_key_t;
 #define EXIT_ON_PRINT 0
 #define PRINT_NUM 3
 #define ENABLE_MS_MEASUREMENTS 0 // finer granularity measurements
-#define SHOW_AGGREGATE_STATS 0
+#define SHOW_AGGREGATE_STATS 1
 
 
 // QUORUM

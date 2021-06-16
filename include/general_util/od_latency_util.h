@@ -115,8 +115,8 @@ static inline void start_measurement(latency_info_t* latency_info, uint32_t sess
 //// A condition to be used to trigger periodic (but rare) measurements
 //static inline bool trigger_measurement(uint16_t local_client_id)
 //{
-//  return t_stats[local_client_id].cache_hits_per_thread % K_32 > 0 &&
-//         t_stats[local_client_id].cache_hits_per_thread % K_32 <= 500 &&
+//  return t_stats[local_client_id].total_reqs % K_32 > 0 &&
+//         t_stats[local_client_id].total_reqs % K_32 <= 500 &&
 //         local_client_id == 0 && machine_id == MACHINE_NUM -1;
 //}
 
