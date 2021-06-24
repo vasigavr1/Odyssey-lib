@@ -96,8 +96,8 @@ typedef struct key mica_key_t;
 #define DISABLE_LOCKING 0
 
 #define ENABLE_CLIENTS 0
-#define CLIENTS_PER_MACHINE_ 2
-#define PER_SESSION_REQ_NUM 1
+#define CLIENTS_PER_MACHINE_ 1
+#define PER_SESSION_REQ_NUM 5
 #define CLIENTS_PER_MACHINE (ENABLE_CLIENTS ? CLIENTS_PER_MACHINE_ : 0)
 #define ENABLE_LOCK_FREE_READING 1
 
@@ -118,7 +118,7 @@ typedef struct key mica_key_t;
 #define EXIT_ON_PRINT 0
 #define PRINT_NUM 3
 #define ENABLE_MS_MEASUREMENTS 0 // finer granularity measurements
-#define SHOW_AGGREGATE_STATS 1
+#define SHOW_AGGREGATE_STATS 0
 
 
 // QUORUM
@@ -137,7 +137,7 @@ typedef struct key mica_key_t;
 #define ENABLE_RMWS (1 && (COMPILED_SYSTEM == kite_sys || COMPILED_SYSTEM == paxos_sys ))
 #define FEED_FROM_TRACE 0 // used to enable skew++
 // RMW TRACE
-#define ENABLE_NO_CONFLICT_RMW 0 // each thread rmws a different key
+#define ENABLE_NO_CONFLICT_RMW 0 // each session access its own  key
 #define ENABLE_ALL_CONFLICT_RMW 0 // all threads do rmws to one key (0)
 #define ENABLE_SINGLE_KEY_RMW 0
 #define ALL_RMWS_SINGLE_KEY 0 //  all threads do only rmws to one key (0)

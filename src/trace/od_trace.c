@@ -172,10 +172,13 @@ static trace_t* manufacture_trace(int t_id)
   uint seed = (uint)(time.tv_nsec + ((machine_id * WORKERS_PER_MACHINE) + t_id) + (uint64_t)trace);
   srand (seed);
   opcode_info_t *opc_info = (opcode_info_t *) calloc(1, sizeof(opcode_info_t));
-  uint32_t i;
+  uint32_t i, sess_id = 0;
+
   //parse file line by line and insert trace to cmd.
   for (i = 0; i < TRACE_SIZE; i++) {
     trace[i].opcode = 0;
+
+    int session_window = 10 * SESSIONS_PER_THREAD;
 
     //Before reading the request decide if it's gone be r_rep or write
     trace[i].opcode = compute_opcode(opc_info, &seed);
@@ -189,8 +192,12 @@ static trace_t* manufacture_trace(int t_id)
         key_id = 0;
       else if (RMW_ONE_KEY_PER_THREAD)
         key_id = (uint32_t) t_id;
-      else if (ENABLE_NO_CONFLICT_RMW)
-        key_id = (uint32_t) ((machine_id * WORKERS_PER_MACHINE) + t_id);
+      else if (ENABLE_NO_CONFLICT_RMW) {
+        key_id = (uint32_t) ((machine_id * WORKERS_PER_MACHINE * session_window) + (t_id * session_window) +
+                             sess_id);
+        //if (i < SESSIONS_PER_THREAD) printf("%u: key_id  %u\n", i, key_id);
+        MOD_INCR(sess_id, session_window);
+      }
       else key_id = (uint32_t) (rand_r(&seed) % KVS_NUM_KEYS);
 
       //printf("Wrkr %u key %u \n", t_id, key_id);
