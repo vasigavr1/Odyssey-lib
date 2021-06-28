@@ -58,35 +58,35 @@ typedef struct key mica_key_t;
 
 //-------------------------------------------
 /* ----------SYSTEM------------------------ */
-// Cloudlab
-//#define TOTAL_CORES 16
-//#define TOTAL_CORES_ (TOTAL_CORES - 1)
-//#define SOCKET_NUM 2
-//#define PHYSICAL_CORES_PER_SOCKET 8
-//#define LOGICAL_CORES_PER_SOCKET 8
-//#define PHYSICAL_CORE_DISTANCE 1 // distance between two physical cores of the same socket
-//#define WORKER_HYPERTHREADING 1 // schedule two threads on the same core/-------------------------------------------
-//#define MAX_SERVER_PORTS 1 //
-
-// Informatics
-#define TOTAL_CORES 40
+//Cloudlab
+#define TOTAL_CORES 16
 #define TOTAL_CORES_ (TOTAL_CORES - 1)
 #define SOCKET_NUM 2
-#define PHYSICAL_CORES_PER_SOCKET 10
-#define LOGICAL_CORES_PER_SOCKET 20
-#define PHYSICAL_CORE_DISTANCE 2 // distance between two physical cores of the same socket
-#define WORKER_HYPERTHREADING 0 // schedule two threads on the same core
+#define PHYSICAL_CORES_PER_SOCKET 8
+#define LOGICAL_CORES_PER_SOCKET 8
+#define PHYSICAL_CORE_DISTANCE 1 // distance between two physical cores of the same socket
+#define WORKER_HYPERTHREADING 1 // schedule two threads on the same core/-------------------------------------------
 #define MAX_SERVER_PORTS 1 //
+
+//// Informatics
+//#define TOTAL_CORES 40
+//#define TOTAL_CORES_ (TOTAL_CORES - 1)
+//#define SOCKET_NUM 2
+//#define PHYSICAL_CORES_PER_SOCKET 10
+//#define LOGICAL_CORES_PER_SOCKET 20
+//#define PHYSICAL_CORE_DISTANCE 2 // distance between two physical cores of the same socket
+//#define WORKER_HYPERTHREADING 0 // schedule two threads on the same core
+//#define MAX_SERVER_PORTS 1 //
 
 // Where to BIND the KVS
 #define KVS_SOCKET 0// (WORKERS_PER_MACHINE < 30 ? 0 : 1 )// socket where the cache is bind
 
 // CORE CONFIGURATION
-#define MACHINE_NUM 2
+#define MACHINE_NUM 5
 
 
 
-#define WORKERS_PER_MACHINE 1
+#define WORKERS_PER_MACHINE 8
 #define SESSIONS_PER_THREAD 40
 #define WRITE_RATIO 500 //Warning write ratio is given out of a 1000, e.g 10 means 10/1000 i.e. 1%
 #define RMW_RATIO 1000// this is out of 1000, e.g. 10 means 1%
