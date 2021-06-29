@@ -92,7 +92,7 @@ typedef struct key mica_key_t;
 #define RMW_RATIO 1000// this is out of 1000, e.g. 10 means 1%
 #define ENABLE_MULTICAST_ 0
 
-#define ENABLE_ASSERTIONS 0
+#define ENABLE_ASSERTIONS 1
 #define DISABLE_LOCKING 0
 
 #define ENABLE_CLIENTS 0
