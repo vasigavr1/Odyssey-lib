@@ -103,7 +103,7 @@ typedef struct key mica_key_t;
 
 
 
-#define PUT_A_MACHINE_TO_SLEEP 0
+#define PUT_A_MACHINE_TO_SLEEP 1
 #define MACHINE_THAT_SLEEPS 1
 
 #define MEASURE_LATENCY 0
