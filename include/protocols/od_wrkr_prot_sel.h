@@ -13,7 +13,7 @@
 
 #ifdef PAXOS
   #include "cp_util.h"
-  #include "cp_inline_util.h"
+  #include "cp_main_loop.h"
   #define appl_init_qp_meta cp_init_qp_meta
   #define set_up_appl_ctx cp_set_up_pending_ops
   #define main_loop cp_main_loop

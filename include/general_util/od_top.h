@@ -115,7 +115,7 @@ typedef struct key mica_key_t;
 #define CREDIT_TIMEOUT  M_16 // B_4_EXACT //
 
 // PRINTS -- STATS
-#define EXIT_ON_PRINT 1
+#define EXIT_ON_PRINT 0
 #define PRINT_NUM 3
 #define ENABLE_MS_MEASUREMENTS 0 // finer granularity measurements
 #define SHOW_AGGREGATE_STATS 0
