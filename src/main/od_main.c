@@ -20,7 +20,6 @@ t_stats_t t_stats[WORKERS_PER_MACHINE];
 c_stats_t c_stats[CLIENTS_PER_MACHINE];
 remote_qp_t ***rem_qp;  //[MACHINE_NUM][WORKERS_PER_MACHINE][QP_NUM];
 atomic_bool qps_are_set_up;
-atomic_bool print_for_debug;
 FILE* client_log[CLIENTS_PER_MACHINE];
 struct wrk_clt_if interface[WORKERS_PER_MACHINE];
 uint64_t last_pulled_req[SESSIONS_PER_MACHINE];
@@ -49,17 +48,6 @@ int main(int argc, char *argv[])
 
   for(uint16_t i = 0; i < TOTAL_THREADS; i++) {
     if (i < WORKERS_PER_MACHINE) {
-      #if defined KITE || defined PAXOS
-        // PAXOS VERIFIER
-        if (VERIFY_PAXOS || PRINT_LOGS || COMMIT_LOGS) {
-          char fp_name[40];
-          my_printf(green, "WILL PRINT LOGS IN THIS RUN \n");
-          sprintf(fp_name, "../paxos/src/PaxosVerifier/thread%d.out", GET_GLOBAL_T_ID(machine_id, i));
-          rmw_verify_fp[i] = fopen(fp_name, "w+");
-          assert(rmw_verify_fp[i] != NULL);
-        }
-      #endif
-
       od_spawn_threads(param_arr, i, node_purpose, &pinned_hw_threads,
                        &attr, thread_arr, worker, occupied_cores);
     }

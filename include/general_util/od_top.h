@@ -115,7 +115,7 @@ typedef struct key mica_key_t;
 #define CREDIT_TIMEOUT  M_16 // B_4_EXACT //
 
 // PRINTS -- STATS
-#define EXIT_ON_PRINT 0
+#define EXIT_ON_PRINT 1
 #define PRINT_NUM 3
 #define ENABLE_MS_MEASUREMENTS 0 // finer granularity measurements
 #define SHOW_AGGREGATE_STATS 0
@@ -308,7 +308,6 @@ extern int is_roce, machine_id, num_threads;
 extern char **remote_ips, *local_ip, *dev_name;
 extern all_qp_attr_t *all_qp_attr;
 extern atomic_uint_fast32_t workers_with_filled_qp_attr;
-extern atomic_bool print_for_debug;
 extern atomic_bool qps_are_set_up;
 extern FILE* client_log[CLIENTS_PER_MACHINE];
 extern uint64_t time_approx;

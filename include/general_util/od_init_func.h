@@ -142,7 +142,6 @@ static void od_generic_init_globals(int qp_num)
       all_qp_attr->wrkr_qp[m_i][w_i] = &qp_buf[(m_i * WORKERS_PER_MACHINE * qp_num) + (w_i * qp_num)];
     }
   }
-  print_for_debug = false;
   memset((struct thread_stats*) t_stats, 0, WORKERS_PER_MACHINE * sizeof(struct thread_stats));
   memset((struct client_stats*) c_stats, 0, CLIENTS_PER_MACHINE * sizeof(struct client_stats));
   qps_are_set_up = false;
