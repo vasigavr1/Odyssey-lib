@@ -39,7 +39,7 @@
 
 
 // Stats thread
-void *print_stats(void*);
+_Noreturn void *print_stats(void*);
 void *client(void *);
 void *worker(void *arg);
 

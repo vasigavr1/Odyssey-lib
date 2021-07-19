@@ -17,7 +17,7 @@
 #endif
 
 #ifdef PAXOS
-  #include "cp_util.h"
+  #include <cp_config.h>
   #define appl_stats cp_stats
 #endif
 

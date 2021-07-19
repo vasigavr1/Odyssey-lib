@@ -7,7 +7,8 @@
 #include "od_latency_util.h"
 
 void print_latency_stats(void);
-void *print_stats(void* no_arg)
+
+_Noreturn void *print_stats(void* no_arg)
 {
 
   stats_ctx_t *ctx = calloc(1, sizeof(stats_ctx_t));

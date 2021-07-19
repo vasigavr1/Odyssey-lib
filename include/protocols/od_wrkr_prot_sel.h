@@ -12,7 +12,8 @@
 #endif
 
 #ifdef PAXOS
-  #include "cp_util.h"
+  #include "cp_init.h"
+  #include "cp_config.h"
   #include "cp_main_loop.h"
   #define appl_init_qp_meta cp_init_qp_meta
   #define set_up_appl_ctx cp_set_up_pending_ops

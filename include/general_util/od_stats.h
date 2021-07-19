@@ -10,7 +10,8 @@
 #include <stdint.h>
 #include <time.h>
 #include <stdio.h>
-#include "od_generic_opcodes.h"
+#include <od_generic_opcodes.h>
+#include <od_sizes.h>
 
 
 #define MAX_LATENCY 400 //in us

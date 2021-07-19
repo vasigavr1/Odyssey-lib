@@ -13,8 +13,8 @@
 #endif
 
 #ifdef PAXOS
-  #include "cp_main.h"
-  #include "cp_util.h"
+  #include <cp_config.h>
+  #include "cp_init.h"
   #define appl_init_func cp_init_functionality
 #endif
 
